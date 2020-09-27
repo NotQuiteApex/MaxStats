@@ -1,9 +1,14 @@
+/***************************************\
+ * MaxStats - NotQuiteApex             *
+ * Showing PC stats from a tiny screen *
+\***************************************/
+
+// Nothing yet!
+
 void setup() {
-  // put your setup code here, to run once:
 
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
 
 }
