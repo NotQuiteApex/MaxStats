@@ -18,19 +18,42 @@ namespace MaxStatsDesktop
             IsCpuEnabled = true,
             IsGpuEnabled = true,
             IsMemoryEnabled = true,
-            IsMotherboardEnabled = true
         };
         private UpdateVisitor visitor = new UpdateVisitor();
 
-        private int idx = 0;
+        private Boolean closing = false;
+
+        private String cpuName = "Unknown CPU";
+        private String cpuFreq = "0";
+        private String cpuTemp = "0";
+        private String cpuLoad = "0";
+
+        private String gpuName      = "Unknown GPU";
+        private String gpuTemp      = "0";
+        private String gpuCoreLoad  = "0";
+        private String gpuCoreClock = "0";
+        private String gpuVramLoad  = "0";
+        private String gpuVramClock = "0";
+
+        private String ramUsed  = "0";
+        private String ramTotal = "0";
 
         public MainForm()
         {
             InitializeComponent();
             comp.Open();
+
+            // Run one update to populate stat values.
+            UpdateComp();
         }
 
         private void updatetick_Tick(object sender, EventArgs e)
+        {
+            // Update Computer object, every so often.
+            UpdateComp();
+        }
+
+        private void UpdateComp()
         {
             // Update the sensors
             comp.Accept(visitor);
@@ -39,9 +62,10 @@ namespace MaxStatsDesktop
             foreach (IHardware hardware in comp.Hardware)
             {
                 // Let's check each of the hardwarez
-                // First up is CPU, let's grab the average frequency and temp
                 if (hardware.HardwareType == HardwareType.Cpu)
                 {
+                    // First up is CPU, let's grab the average frequency, temperature, and load.
+
                     decimal _freqSum = 0;
                     decimal _cpuTemp = 0;
                     decimal _cpuLoad = 0;
@@ -63,27 +87,38 @@ namespace MaxStatsDesktop
                             _cpuLoad = (decimal)sensor.Value;
                         }
 
-                        Console.WriteLine("{0}, {1}: {2}", sensor.Name, sensor.SensorType, sensor.Value);
+                        //Console.WriteLine("{0}, {1}: {2}", sensor.Name, sensor.SensorType, sensor.Value);
                     }
 
-                    cpuName.Text = $"Name: {hardware.Name}";
-                    cpuFreq.Text = $"Freq: {(_freqSum / _coreCount / 1000).ToString("n2")} GHz";
-                    cpuTemp.Text = $"Temp: {_cpuTemp.ToString("n1")} ° C";
-                    cpuLoad.Text = $"Load: {_cpuLoad.ToString("n1")} %";
+                    cpuName = hardware.Name;
+                    cpuFreq = (_freqSum / _coreCount / 1000).ToString("n2");
+                    cpuTemp = _cpuTemp.ToString("n1");
+                    cpuLoad = _cpuLoad.ToString("n1");
 
-                    cpuName.Refresh();
-                    cpuFreq.Refresh();
-                    cpuTemp.Refresh();
-                    cpuLoad.Refresh();
+                    if (this.Visible)
+                    {
+                        // Dump the values to the labels as needed. Only done if the form is open.
+                        labelCpuName.Text = $"Name: {cpuName}";
+                        labelCpuFreq.Text = $"Freq: {cpuFreq} GHz";
+                        labelCpuTemp.Text = $"Temp: {cpuTemp} ° C";
+                        labelCpuLoad.Text = $"Load: {cpuLoad} %";
+                        // Show on screen, again as needed.
+                        labelCpuName.Refresh();
+                        labelCpuFreq.Refresh();
+                        labelCpuTemp.Refresh();
+                        labelCpuLoad.Refresh();
+                    }
                 }
                 else if (hardware.HardwareType == HardwareType.GpuNvidia || hardware.HardwareType == HardwareType.GpuAmd)
                 {
+                    // Now for gpu. We grab the clock speed of the core and ram, as well as their load
 
                     decimal _gpuTemp = 0;
 
-                    decimal _gpuCoreClock = 0;
                     decimal _gpuCoreLoad = 0;
+                    decimal _gpuCoreClock = 0;
 
+                    decimal _gpuVramLoad = 0;
                     decimal _gpuVramClock = 0;
 
                     foreach (ISensor sensor in hardware.Sensors)
@@ -105,8 +140,8 @@ namespace MaxStatsDesktop
                         {
                             if (sensor.Name == "GPU Core")
                                 _gpuCoreLoad = (decimal)sensor.Value;
-                            /*else if (sensor.Name == "GPU Memory")
-                                gpuMemoryLoad = (decimal)sensor.Value;*/
+                            else if (sensor.Name == "GPU Memory")
+                                _gpuVramLoad = (decimal)sensor.Value;
                         }
                         /*else if (sensor.SensorType == SensorType.SmallData)
                         {
@@ -117,17 +152,29 @@ namespace MaxStatsDesktop
                         }*/
                     }
 
-                    gpuName.Text = $"Name: {hardware.Name}";
-                    gpuTemp.Text = $"Temp: {_gpuTemp.ToString("n1")} ° C";
-                    gpuLoad.Text = $"Load: {_gpuCoreLoad.ToString("n1")} %";
-                    gpuCoreClock.Text = $"Core Clock: {_gpuCoreClock.ToString("n1")} MHz";
-                    gpuVramClock.Text = $"VRAM Clock: {_gpuVramClock.ToString("n1")} MHz";
+                    gpuName = hardware.Name;
+                    gpuTemp = _gpuTemp.ToString("n1");
+                    gpuCoreLoad = _gpuCoreLoad.ToString("n1");
+                    gpuCoreClock = _gpuCoreClock.ToString("n1");
+                    gpuVramLoad = _gpuVramLoad.ToString("n1");
+                    gpuVramClock = _gpuVramClock.ToString("n1");
 
-                    gpuName.Refresh();
-                    gpuTemp.Refresh();
-                    gpuLoad.Refresh();
-                    gpuCoreClock.Refresh();
-                    gpuVramClock.Refresh();
+                    if (this.Visible)
+                    {
+                        // Same here with the GPU, dump values and show them
+                        labelGpuName.Text = $"Name: {gpuName}";
+                        labelGpuTemp.Text = $"Temp: {gpuTemp} ° C";
+                        labelGpuCoreLoad.Text = $"Core Load: {gpuCoreLoad} %";
+                        labelGpuCoreClock.Text = $"Core Clock: {gpuCoreClock} MHz";
+                        labelGpuVramLoad.Text = $"VRAM Load: {gpuVramLoad} % used";
+                        labelGpuVramClock.Text = $"VRAM Clock: {gpuVramClock} MHz";
+
+                        labelGpuName.Refresh();
+                        labelGpuTemp.Refresh();
+                        labelGpuCoreLoad.Refresh();
+                        labelGpuCoreClock.Refresh();
+                        labelGpuVramClock.Refresh();
+                    }
                 }
                 else if (hardware.HardwareType == HardwareType.Memory)
                 {
@@ -145,21 +192,60 @@ namespace MaxStatsDesktop
                         }
                     }
 
-                    ramUsed.Text = $"Used: {_ramUsed.ToString("n1")} GB";
-                    ramTotal.Text = $"Total: {Decimal.Round(_ramUsed + _ramAvailable).ToString("n1")} GB";
+                    ramUsed = _ramUsed.ToString("n1");
+                    ramTotal = Decimal.Round(_ramUsed + _ramAvailable).ToString("n0");
 
-                    ramUsed.Refresh();
-                    ramTotal.Refresh();
+                    if (this.Visible)
+                    {
+                        // Lastly do the same with RAM
+                        labelRamUsed.Text = $"Used: {ramUsed} GB";
+                        labelRamTotal.Text = $"Total: {ramTotal} GB";
+
+                        labelRamUsed.Refresh();
+                        labelRamTotal.Refresh();
+                    }
                 }
             }
         }
 
-        private void MainForm_Load(object sender, EventArgs e)
+        private void MainForm_Resize(object sender, EventArgs e)
+        {
+            if (this.WindowState == FormWindowState.Minimized)
+            {
+                this.Hide();
+                trayIcon.Visible = true;
+            }
+        }
+
+        private void exitToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            closing = true;
+            this.Close();
+        }
+
+        private void showToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            this.Show();
+            trayIcon.Visible = false;
+        }
+
+        private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            if (e.CloseReason == CloseReason.UserClosing && !closing)
+            {
+                this.Hide();
+                trayIcon.Visible = true;
+                e.Cancel = true;
+            }
+        }
+
+        private void trayMenu_Opening(object sender, CancelEventArgs e)
         {
 
         }
     }
 
+    // Visitor, for grabbing/updating the values of all the hardware we check.
     public class UpdateVisitor : IVisitor
     {
         public void VisitComputer(IComputer computer)
