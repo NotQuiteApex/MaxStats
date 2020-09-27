@@ -54,6 +54,8 @@ namespace MaxStatsDesktop
             this.showToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem1 = new System.Windows.Forms.ToolStripSeparator();
             this.exitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.maxStatsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.toolStripMenuItem2 = new System.Windows.Forms.ToolStripSeparator();
             this.cpuGroup.SuspendLayout();
             this.gpuGroup.SuspendLayout();
             this.ramGroup.SuspendLayout();
@@ -232,12 +234,14 @@ namespace MaxStatsDesktop
             // trayMenu
             // 
             this.trayMenu.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.maxStatsToolStripMenuItem,
             this.toolStripSeparator1,
+            this.toolStripMenuItem2,
             this.showToolStripMenuItem,
             this.toolStripMenuItem1,
             this.exitToolStripMenuItem});
             this.trayMenu.Name = "trayMenu";
-            this.trayMenu.Size = new System.Drawing.Size(181, 82);
+            this.trayMenu.Size = new System.Drawing.Size(181, 110);
             this.trayMenu.Opening += new System.ComponentModel.CancelEventHandler(this.trayMenu_Opening);
             this.trayMenu.ItemClicked += new System.Windows.Forms.ToolStripItemClickedEventHandler(this.trayMenu_ItemClicked);
             // 
@@ -250,6 +254,7 @@ namespace MaxStatsDesktop
             // 
             this.showToolStripMenuItem.Name = "showToolStripMenuItem";
             this.showToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.showToolStripMenuItem.Tag = "important";
             this.showToolStripMenuItem.Text = "Show stats";
             this.showToolStripMenuItem.Click += new System.EventHandler(this.showToolStripMenuItem_Click);
             // 
@@ -262,8 +267,22 @@ namespace MaxStatsDesktop
             // 
             this.exitToolStripMenuItem.Name = "exitToolStripMenuItem";
             this.exitToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.exitToolStripMenuItem.Tag = "important";
             this.exitToolStripMenuItem.Text = "Exit";
             this.exitToolStripMenuItem.Click += new System.EventHandler(this.exitToolStripMenuItem_Click);
+            // 
+            // maxStatsToolStripMenuItem
+            // 
+            this.maxStatsToolStripMenuItem.Font = new System.Drawing.Font("Segoe UI", 9F, ((System.Drawing.FontStyle)((System.Drawing.FontStyle.Bold | System.Drawing.FontStyle.Underline))), System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.maxStatsToolStripMenuItem.Name = "maxStatsToolStripMenuItem";
+            this.maxStatsToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.maxStatsToolStripMenuItem.Tag = "important";
+            this.maxStatsToolStripMenuItem.Text = "MaxStats";
+            // 
+            // toolStripMenuItem2
+            // 
+            this.toolStripMenuItem2.Name = "toolStripMenuItem2";
+            this.toolStripMenuItem2.Size = new System.Drawing.Size(177, 6);
             // 
             // MainForm
             // 
@@ -319,6 +338,8 @@ namespace MaxStatsDesktop
         private System.Windows.Forms.ToolStripMenuItem exitToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator1;
         private System.Windows.Forms.ToolStripSeparator toolStripMenuItem1;
+        private System.Windows.Forms.ToolStripMenuItem maxStatsToolStripMenuItem;
+        private System.Windows.Forms.ToolStripSeparator toolStripMenuItem2;
     }
 }
 

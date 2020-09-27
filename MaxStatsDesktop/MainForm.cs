@@ -298,16 +298,35 @@ namespace MaxStatsDesktop
 
         private void trayMenu_Opening(object sender, CancelEventArgs e)
         {
-            while (trayMenu.Items[0].Text.ToLower() == "show stats")
-                trayMenu.Items.RemoveAt(0);
+            // Manage items by changes in the list.
+            List<string> coms = new List<string>();
 
             ManagementObjectSearcher searcher = new ManagementObjectSearcher("root\\CIMV2", "SELECT * FROM Win32_PnPEntity WHERE ClassGuid='{4d36e978-e325-11ce-bfc1-08002be10318}'");
             foreach (ManagementObject m in searcher.Get())
+                coms.Add(m["Name"].ToString());
+
+            // If any of the items no longer exist (COM's disconnected) or the options are satic, remove them from the list.
+            for (int i = trayMenu.Items.Count-1; i >= 0; i--)
+            {
+                ToolStripItem s = trayMenu.Items[i];
+                if ((string)s.Tag != "important" && coms.IndexOf(s.Text) == -1)
+                    trayMenu.Items.Remove(s);
+            }
+
+            // Go through each COM, check if it exists in the list, and if not add it.
+            foreach (string s in coms)
             {
                 var item = new ToolStripMenuItem();
-                item.Text = m["Name"].ToString();
-                trayMenu.Items.Insert(0, item);
-                Console.WriteLine(m["Name"].ToString());
+                item.Text = s;
+                bool shouldadd = true;
+                for (int i = trayMenu.Items.Count - 1; i >= 0; i--)
+                {
+                    ToolStripItem t = trayMenu.Items[i];
+                    if (t.Text == s)
+                        shouldadd = false;
+                }
+                if (shouldadd)
+                    trayMenu.Items.Insert(1, item);
             }
         }
 
@@ -316,15 +335,20 @@ namespace MaxStatsDesktop
             string comchosen = e.ClickedItem.Text;
             Match match = Regex.Match(comchosen, @"[a-zA-Z\ ]+\((COM[0-9]+)\)", RegexOptions.IgnoreCase);
 
-            if (match.Success)
+            if (!match.Success)
             {
-                Console.WriteLine(match.Groups[1].Value);
-                serial.PortName = match.Groups[1].Value;
-            }
-            else
                 Console.WriteLine("Not Found");
+                return;
+            }
 
-            Console.WriteLine(e.ClickedItem);
+            // Disable the rest of the checkmarks on the items.
+            foreach(ToolStripItem t in trayMenu.Items) (t as ToolStripMenuItem).Checked = (t as ToolStripMenuItem).Checked && true;
+            // Change the selected item's checkmark
+            (e.ClickedItem as ToolStripMenuItem).Checked = !(e.ClickedItem as ToolStripMenuItem).Checked;
+
+            // Time to connect with serial!
+            serial.PortName = match.Groups[1].Value;
+            // TODO
         }
     }
 
