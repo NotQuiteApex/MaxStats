@@ -50,9 +50,10 @@ namespace MaxStatsDesktop
             this.labelRamUsed = new System.Windows.Forms.Label();
             this.trayIcon = new System.Windows.Forms.NotifyIcon(this.components);
             this.trayMenu = new System.Windows.Forms.ContextMenuStrip(this.components);
-            this.showToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.exitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
+            this.showToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.toolStripMenuItem1 = new System.Windows.Forms.ToolStripSeparator();
+            this.exitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.cpuGroup.SuspendLayout();
             this.gpuGroup.SuspendLayout();
             this.ramGroup.SuspendLayout();
@@ -231,12 +232,19 @@ namespace MaxStatsDesktop
             // trayMenu
             // 
             this.trayMenu.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.showToolStripMenuItem,
             this.toolStripSeparator1,
+            this.showToolStripMenuItem,
+            this.toolStripMenuItem1,
             this.exitToolStripMenuItem});
             this.trayMenu.Name = "trayMenu";
-            this.trayMenu.Size = new System.Drawing.Size(181, 98);
+            this.trayMenu.Size = new System.Drawing.Size(181, 82);
             this.trayMenu.Opening += new System.ComponentModel.CancelEventHandler(this.trayMenu_Opening);
+            this.trayMenu.ItemClicked += new System.Windows.Forms.ToolStripItemClickedEventHandler(this.trayMenu_ItemClicked);
+            // 
+            // toolStripSeparator1
+            // 
+            this.toolStripSeparator1.Name = "toolStripSeparator1";
+            this.toolStripSeparator1.Size = new System.Drawing.Size(177, 6);
             // 
             // showToolStripMenuItem
             // 
@@ -245,6 +253,11 @@ namespace MaxStatsDesktop
             this.showToolStripMenuItem.Text = "Show stats";
             this.showToolStripMenuItem.Click += new System.EventHandler(this.showToolStripMenuItem_Click);
             // 
+            // toolStripMenuItem1
+            // 
+            this.toolStripMenuItem1.Name = "toolStripMenuItem1";
+            this.toolStripMenuItem1.Size = new System.Drawing.Size(177, 6);
+            // 
             // exitToolStripMenuItem
             // 
             this.exitToolStripMenuItem.Name = "exitToolStripMenuItem";
@@ -252,16 +265,11 @@ namespace MaxStatsDesktop
             this.exitToolStripMenuItem.Text = "Exit";
             this.exitToolStripMenuItem.Click += new System.EventHandler(this.exitToolStripMenuItem_Click);
             // 
-            // toolStripSeparator1
-            // 
-            this.toolStripSeparator1.Name = "toolStripSeparator1";
-            this.toolStripSeparator1.Size = new System.Drawing.Size(6, 6);
-            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(247, 271);
+            this.ClientSize = new System.Drawing.Size(245, 271);
             this.Controls.Add(this.ramGroup);
             this.Controls.Add(this.gpuGroup);
             this.Controls.Add(this.cpuGroup);
@@ -310,6 +318,7 @@ namespace MaxStatsDesktop
         private System.Windows.Forms.ToolStripMenuItem showToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem exitToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator1;
+        private System.Windows.Forms.ToolStripSeparator toolStripMenuItem1;
     }
 }
 

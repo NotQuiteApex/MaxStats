@@ -7,7 +7,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.IO.Ports;
+using System.Management;
+using System.Text.RegularExpressions;
 using LibreHardwareMonitor.Hardware;
+using System.Threading;
 
 namespace MaxStatsDesktop
 {
@@ -21,22 +25,30 @@ namespace MaxStatsDesktop
         };
         private UpdateVisitor visitor = new UpdateVisitor();
 
-        private Boolean closing = false;
+        // For closing via systray
+        private bool closing = false;
 
-        private String cpuName = "Unknown CPU";
-        private String cpuFreq = "0";
-        private String cpuTemp = "0";
-        private String cpuLoad = "0";
+        // All the stats we send via serial.
+        private string cpuName = "Unknown CPU";
+        private string cpuFreq = "0";
+        private string cpuTemp = "0";
+        private string cpuLoad = "0";
 
-        private String gpuName      = "Unknown GPU";
-        private String gpuTemp      = "0";
-        private String gpuCoreLoad  = "0";
-        private String gpuCoreClock = "0";
-        private String gpuVramLoad  = "0";
-        private String gpuVramClock = "0";
+        private string gpuName      = "Unknown GPU";
+        private string gpuTemp      = "0";
+        private string gpuCoreLoad  = "0";
+        private string gpuCoreClock = "0";
+        private string gpuVramLoad  = "0";
+        private string gpuVramClock = "0";
 
-        private String ramUsed  = "0";
-        private String ramTotal = "0";
+        private string ramUsed  = "0";
+        private string ramTotal = "0";
+
+        // Serial comms variables.
+        private bool _continueComms = true;
+        private Mutex compMutex = new Mutex();
+        private SerialPort serial = new SerialPort();
+        private Thread comms;
 
         public MainForm()
         {
@@ -45,16 +57,23 @@ namespace MaxStatsDesktop
 
             // Run one update to populate stat values.
             UpdateComp();
-        }
 
-        private void updatetick_Tick(object sender, EventArgs e)
-        {
-            // Update Computer object, every so often.
-            UpdateComp();
+            // Set up serial comms.
+            comms = new Thread(SerialComms);
+            serial.BaudRate = 9600; // Serial.begin(9600, SERIAL_8E2);
+            serial.DataBits = 8;
+            serial.Parity = Parity.Even;
+            serial.StopBits = StopBits.Two;
+            serial.Handshake = Handshake.None;
+
+            comms.Start();
         }
 
         private void UpdateComp()
         {
+            // Wait turn for mutex
+            compMutex.WaitOne();
+
             // Update the sensors
             comp.Accept(visitor);
 
@@ -206,6 +225,37 @@ namespace MaxStatsDesktop
                     }
                 }
             }
+
+            // Unlock mutex, let the other thread use it now.
+            compMutex.ReleaseMutex();
+        }
+
+        private void SerialComms()
+        {
+            while (_continueComms)
+            {
+                try
+                {
+                    // If serial is started, don't try to use it.
+                    if (!serial.IsOpen) continue;
+
+                    // TODO: send ping to the device, then check for the response
+                    // TODO: send the cpuName, gpuName, and ramTotal, wait for ack
+                    // TODO: send the other data on loop every so often (1 second)
+                    // Wait for mutex to unlock.
+                    //compMutex.WaitOne();
+
+                    // We're done here, stop blocking the other thread.
+                    //compMutex.ReleaseMutex();
+                }
+                catch (TimeoutException) { }
+            }
+        }
+
+        private void updatetick_Tick(object sender, EventArgs e)
+        {
+            // Update Computer object, every so often.
+            UpdateComp();
         }
 
         private void MainForm_Resize(object sender, EventArgs e)
@@ -219,6 +269,12 @@ namespace MaxStatsDesktop
 
         private void exitToolStripMenuItem_Click(object sender, EventArgs e)
         {
+            // Break down serial comms
+            _continueComms = false;
+            comms.Join();
+            if (serial.IsOpen) serial.Close();
+
+            // Close the program
             closing = true;
             this.Close();
         }
@@ -231,6 +287,7 @@ namespace MaxStatsDesktop
 
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
         {
+            // Program won't close unless closed from the systray
             if (e.CloseReason == CloseReason.UserClosing && !closing)
             {
                 this.Hide();
@@ -241,7 +298,33 @@ namespace MaxStatsDesktop
 
         private void trayMenu_Opening(object sender, CancelEventArgs e)
         {
+            while (trayMenu.Items[0].Text.ToLower() == "show stats")
+                trayMenu.Items.RemoveAt(0);
 
+            ManagementObjectSearcher searcher = new ManagementObjectSearcher("root\\CIMV2", "SELECT * FROM Win32_PnPEntity WHERE ClassGuid='{4d36e978-e325-11ce-bfc1-08002be10318}'");
+            foreach (ManagementObject m in searcher.Get())
+            {
+                var item = new ToolStripMenuItem();
+                item.Text = m["Name"].ToString();
+                trayMenu.Items.Insert(0, item);
+                Console.WriteLine(m["Name"].ToString());
+            }
+        }
+
+        private void trayMenu_ItemClicked(object sender, ToolStripItemClickedEventArgs e)
+        {
+            string comchosen = e.ClickedItem.Text;
+            Match match = Regex.Match(comchosen, @"[a-zA-Z\ ]+\((COM[0-9]+)\)", RegexOptions.IgnoreCase);
+
+            if (match.Success)
+            {
+                Console.WriteLine(match.Groups[1].Value);
+                serial.PortName = match.Groups[1].Value;
+            }
+            else
+                Console.WriteLine("Not Found");
+
+            Console.WriteLine(e.ClickedItem);
         }
     }
 
