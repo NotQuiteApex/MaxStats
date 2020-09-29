@@ -114,20 +114,6 @@ namespace MaxStatsDesktop
                         cpuFreq = (_freqSum / _coreCount / 1000).ToString("n2");
                         cpuTemp = _cpuTemp.ToString("n1");
                         cpuLoad = _cpuLoad.ToString("n1");
-
-                        if (this.Visible)
-                        {
-                            // Dump the values to the labels as needed. Only done if the form is open.
-                            labelCpuName.Text = $"Name: {cpuName}";
-                            labelCpuFreq.Text = $"Freq: {cpuFreq} GHz";
-                            labelCpuTemp.Text = $"Temp: {cpuTemp} ° C";
-                            labelCpuLoad.Text = $"Load: {cpuLoad} %";
-                            // Show on screen, again as needed.
-                            labelCpuName.Refresh();
-                            labelCpuFreq.Refresh();
-                            labelCpuTemp.Refresh();
-                            labelCpuLoad.Refresh();
-                        }
                     }
                     else if (hardware.HardwareType == HardwareType.GpuNvidia || hardware.HardwareType == HardwareType.GpuAmd)
                     {
@@ -178,23 +164,6 @@ namespace MaxStatsDesktop
                         gpuCoreClock = _gpuCoreClock.ToString("n1");
                         gpuVramLoad = _gpuVramLoad.ToString("n1");
                         gpuVramClock = _gpuVramClock.ToString("n1");
-
-                        if (this.Visible)
-                        {
-                            // Same here with the GPU, dump values and show them
-                            labelGpuName.Text = $"Name: {gpuName}";
-                            labelGpuTemp.Text = $"Temp: {gpuTemp} ° C";
-                            labelGpuCoreLoad.Text = $"Core Load: {gpuCoreLoad} %";
-                            labelGpuCoreClock.Text = $"Core Clock: {gpuCoreClock} MHz";
-                            labelGpuVramLoad.Text = $"VRAM Load: {gpuVramLoad} % used";
-                            labelGpuVramClock.Text = $"VRAM Clock: {gpuVramClock} MHz";
-
-                            labelGpuName.Refresh();
-                            labelGpuTemp.Refresh();
-                            labelGpuCoreLoad.Refresh();
-                            labelGpuCoreClock.Refresh();
-                            labelGpuVramClock.Refresh();
-                        }
                     }
                     else if (hardware.HardwareType == HardwareType.Memory)
                     {
@@ -214,17 +183,41 @@ namespace MaxStatsDesktop
 
                         ramUsed = _ramUsed.ToString("n1");
                         ramTotal = Decimal.Round(_ramUsed + _ramAvailable).ToString("n0");
-
-                        if (this.Visible)
-                        {
-                            // Lastly do the same with RAM
-                            labelRamUsed.Text = $"Used: {ramUsed} GB";
-                            labelRamTotal.Text = $"Total: {ramTotal} GB";
-
-                            labelRamUsed.Refresh();
-                            labelRamTotal.Refresh();
-                        }
                     }
+                }
+
+                // Check if we need to update all the values for the GUI
+                if (this.Visible)
+                {
+                    labelCpuName.Text = $"Name: {cpuName}";
+                    labelCpuFreq.Text = $"Freq: {cpuFreq} GHz";
+                    labelCpuTemp.Text = $"Temp: {cpuTemp} ° C";
+                    labelCpuLoad.Text = $"Load: {cpuLoad} %";
+
+                    labelGpuName.Text = $"Name: {gpuName}";
+                    labelGpuTemp.Text = $"Temp: {gpuTemp} ° C";
+                    labelGpuCoreLoad.Text = $"Core Load: {gpuCoreLoad} %";
+                    labelGpuCoreClock.Text = $"Core Clock: {gpuCoreClock} MHz";
+                    labelGpuVramLoad.Text = $"VRAM Load: {gpuVramLoad} % used";
+                    labelGpuVramClock.Text = $"VRAM Clock: {gpuVramClock} MHz";
+
+                    labelRamUsed.Text = $"Used: {ramUsed} GB";
+                    labelRamTotal.Text = $"Total: {ramTotal} GB";
+
+                    // Show on screen.
+                    labelCpuName.Refresh();
+                    labelCpuFreq.Refresh();
+                    labelCpuTemp.Refresh();
+                    labelCpuLoad.Refresh();
+
+                    labelGpuName.Refresh();
+                    labelGpuTemp.Refresh();
+                    labelGpuCoreLoad.Refresh();
+                    labelGpuCoreClock.Refresh();
+                    labelGpuVramClock.Refresh();
+
+                    labelRamUsed.Refresh();
+                    labelRamTotal.Refresh();
                 }
             } // Unlock mutex!
         }
@@ -260,6 +253,7 @@ namespace MaxStatsDesktop
                 // TODO: send the cpuName, gpuName, and ramTotal, wait for ack
                 // TODO: send the other data on loop every so often (1 second)
 
+                // Sleep for a sec, we don't need to spam the serial pipe.
                 Thread.Sleep(1000);
             }
         }
@@ -272,6 +266,7 @@ namespace MaxStatsDesktop
 
         private void MainForm_Resize(object sender, EventArgs e)
         {
+            // Don't close the whole app, but just hide the window, and go back to the systray.
             if (this.WindowState == FormWindowState.Minimized)
             {
                 this.Hide();
@@ -293,6 +288,7 @@ namespace MaxStatsDesktop
 
         private void showToolStripMenuItem_Click(object sender, EventArgs e)
         {
+            // Show the GUI window! We don't need to stick around in the systray now.
             this.Show();
             trayIcon.Visible = false;
         }
@@ -313,6 +309,7 @@ namespace MaxStatsDesktop
             // Manage items by changes in the list.
             List<string> coms = new List<string>();
 
+            // Window's BS way of getting the friendly name of all the serial devices.
             ManagementObjectSearcher searcher = new ManagementObjectSearcher("root\\CIMV2", "SELECT * FROM Win32_PnPEntity WHERE ClassGuid='{4d36e978-e325-11ce-bfc1-08002be10318}'");
             foreach (ManagementObject m in searcher.Get())
                 coms.Add(m["Name"].ToString());
@@ -344,12 +341,20 @@ namespace MaxStatsDesktop
 
         private void trayMenu_ItemClicked(object sender, ToolStripItemClickedEventArgs e)
         {
+            // Grab the COM name from the list via regex
             string comchosen = e.ClickedItem.Text;
             Match match = Regex.Match(comchosen, @"[a-zA-Z\ ]+\((COM[0-9]+)\)", RegexOptions.IgnoreCase);
 
+            // Uh oh!
             if (!match.Success)
             {
-                Console.WriteLine("Not Found");
+                MessageBox.Show(
+                    "The serial device selected could not be opened. It" +
+                    " may not have been an actual serial device.\n\nSorry!",
+                    "MaxStats Error: Failed to open serial device.",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error
+                );
                 return;
             }
 
@@ -371,8 +376,8 @@ namespace MaxStatsDesktop
             {
                 sendmessage = false;
                 MessageBox.Show(
-                    "The serial device selected could not be opened." +
-                    " It may already be in use by another program.\n\nSorry!",
+                    "The serial device selected could not be opened. It" +
+                    " may already be in use by another program.\n\nSorry!",
                     "MaxStats Error: Failed to open serial device.",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error
@@ -382,8 +387,8 @@ namespace MaxStatsDesktop
             {
                 sendmessage = false;
                 MessageBox.Show(
-                    "The serial device selected is not responding to MaxStats." +
-                    " This could be due to the device not recognizing serial or the chip" + 
+                    "The serial device selected is not responding to MaxStats. This" +
+                    " could be due to the device not recognizing serial or the chip" + 
                     " on the board may have gone bad and no longer functions.\n\nSorry!",
                     "MaxStats Error: Failed to open serial device.",
                     MessageBoxButtons.OK,
