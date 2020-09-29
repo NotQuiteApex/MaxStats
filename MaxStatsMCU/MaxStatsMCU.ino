@@ -6,7 +6,7 @@
 // Nothing yet!
 
 void setup() {
-  Serial.begin(9600, SERIAL_8E2);
+  Serial.begin(9600);
 }
 
 void loop() {
@@ -14,7 +14,9 @@ void loop() {
     String data = "";
     do {
       // Read in data to a string
-      data += Serial.read()
+      int readbyte = Serial.read();
+      if (readbyte != -1)
+        data += (char)readbyte;
     } while (Serial.available() > 0);
     Serial.print("Pong! Look what I got: \"");
     Serial.print(data);

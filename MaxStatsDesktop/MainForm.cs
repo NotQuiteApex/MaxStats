@@ -46,7 +46,8 @@ namespace MaxStatsDesktop
 
         // Serial comms variables.
         private bool _continueComms = true;
-        private Mutex compMutex = new Mutex();
+        private bool sendmessage = false;
+        private Mutex compMutex = new Mutex(true);
         private SerialPort serial = new SerialPort();
         private Thread comms;
 
@@ -60,7 +61,7 @@ namespace MaxStatsDesktop
 
             // Set up serial comms.
             comms = new Thread(SerialComms);
-            serial.BaudRate = 9600; // Serial.begin(9600, SERIAL_8E2);
+            serial.BaudRate = 9600; // Serial.begin(9600);
             serial.DataBits = 8;
             serial.Parity = Parity.Even;
             serial.StopBits = StopBits.Two;
@@ -234,21 +235,44 @@ namespace MaxStatsDesktop
         {
             while (_continueComms)
             {
-                try
+
+                // If serial is started, don't try to use it.
+                if (!serial.IsOpen) continue;
+                Console.WriteLine("hm");
+                if (sendmessage)
                 {
-                    // If serial is started, don't try to use it.
-                    if (!serial.IsOpen) continue;
-
-                    // TODO: send ping to the device, then check for the response
-                    // TODO: send the cpuName, gpuName, and ramTotal, wait for ack
-                    // TODO: send the other data on loop every so often (1 second)
-                    // Wait for mutex to unlock.
-                    //compMutex.WaitOne();
-
-                    // We're done here, stop blocking the other thread.
-                    //compMutex.ReleaseMutex();
+                    Console.WriteLine("about to enter mutex area!");
+                    compMutex.WaitOne();
+                    Console.WriteLine("we're in.");
+                    Console.WriteLine("about to send");
+                    serial.Write(gpuName);
+                    sendmessage = false;
+                    Console.WriteLine("SentCdoe!");
+                    Console.WriteLine("about to exit mutex");
+                    compMutex.ReleaseMutex();
+                    Console.WriteLine("exited mutex.");
                 }
-                catch (TimeoutException) { }
+
+                int thebyte = 0;
+                while (serial.BytesToRead > 0)
+                {
+                    thebyte = serial.ReadByte();
+                    if (thebyte != -1)
+                        Console.Write((char)thebyte);
+                    else
+                        Console.WriteLine();
+                }
+
+                // TODO: send ping to the device, then check for the response
+                // TODO: send the cpuName, gpuName, and ramTotal, wait for ack
+                // TODO: send the other data on loop every so often (1 second)
+                // Wait for mutex to unlock.
+                //compMutex.WaitOne();
+
+                // We're done here, stop blocking the other thread.
+                //compMutex.ReleaseMutex();
+
+                Thread.Sleep(1000);
             }
         }
 
@@ -348,7 +372,8 @@ namespace MaxStatsDesktop
 
             // Time to connect with serial!
             serial.PortName = match.Groups[1].Value;
-            // TODO
+            sendmessage = true;
+            serial.Open();
         }
     }
 
