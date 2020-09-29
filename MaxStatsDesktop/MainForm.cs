@@ -47,7 +47,7 @@ namespace MaxStatsDesktop
         // Serial comms variables.
         private bool _continueComms = true;
         private bool sendmessage = false;
-        private Mutex compMutex = new Mutex(true);
+        private readonly object compMutex = new object();
         private SerialPort serial = new SerialPort();
         private Thread comms;
 
@@ -73,162 +73,160 @@ namespace MaxStatsDesktop
         private void UpdateComp()
         {
             // Wait turn for mutex
-            compMutex.WaitOne();
-
-            // Update the sensors
-            comp.Accept(visitor);
-
-            // Iterate through all the hardware
-            foreach (IHardware hardware in comp.Hardware)
+            lock (compMutex)
             {
-                // Let's check each of the hardwarez
-                if (hardware.HardwareType == HardwareType.Cpu)
+                // Update the sensors
+                comp.Accept(visitor);
+
+                // Iterate through all the hardware
+                foreach (IHardware hardware in comp.Hardware)
                 {
-                    // First up is CPU, let's grab the average frequency, temperature, and load.
-
-                    decimal _freqSum = 0;
-                    decimal _cpuTemp = 0;
-                    decimal _cpuLoad = 0;
-                    int _coreCount = 0;
-
-                    foreach (ISensor sensor in hardware.Sensors)
+                    // Let's check each of the hardwarez
+                    if (hardware.HardwareType == HardwareType.Cpu)
                     {
-                        if (sensor.SensorType == SensorType.Clock && sensor.Name != "Bus Speed")
+                        // First up is CPU, let's grab the average frequency, temperature, and load.
+
+                        decimal _freqSum = 0;
+                        decimal _cpuTemp = 0;
+                        decimal _cpuLoad = 0;
+                        int _coreCount = 0;
+
+                        foreach (ISensor sensor in hardware.Sensors)
                         {
-                            _coreCount++;
-                            _freqSum += (decimal)sensor.Value;
-                        }
-                        else if (sensor.SensorType == SensorType.Temperature && sensor.Name == "Core (Tctl)")
-                        {
-                            _cpuTemp = (decimal)sensor.Value;
-                        }
-                        else if (sensor.SensorType == SensorType.Load && sensor.Name == "CPU Total")
-                        {
-                            _cpuLoad = (decimal)sensor.Value;
+                            if (sensor.SensorType == SensorType.Clock && sensor.Name != "Bus Speed")
+                            {
+                                _coreCount++;
+                                _freqSum += (decimal)sensor.Value;
+                            }
+                            else if (sensor.SensorType == SensorType.Temperature && sensor.Name == "Core (Tctl)")
+                            {
+                                _cpuTemp = (decimal)sensor.Value;
+                            }
+                            else if (sensor.SensorType == SensorType.Load && sensor.Name == "CPU Total")
+                            {
+                                _cpuLoad = (decimal)sensor.Value;
+                            }
+
+                            //Console.WriteLine("{0}, {1}: {2}", sensor.Name, sensor.SensorType, sensor.Value);
                         }
 
-                        //Console.WriteLine("{0}, {1}: {2}", sensor.Name, sensor.SensorType, sensor.Value);
+                        cpuName = hardware.Name;
+                        cpuFreq = (_freqSum / _coreCount / 1000).ToString("n2");
+                        cpuTemp = _cpuTemp.ToString("n1");
+                        cpuLoad = _cpuLoad.ToString("n1");
+
+                        if (this.Visible)
+                        {
+                            // Dump the values to the labels as needed. Only done if the form is open.
+                            labelCpuName.Text = $"Name: {cpuName}";
+                            labelCpuFreq.Text = $"Freq: {cpuFreq} GHz";
+                            labelCpuTemp.Text = $"Temp: {cpuTemp} ° C";
+                            labelCpuLoad.Text = $"Load: {cpuLoad} %";
+                            // Show on screen, again as needed.
+                            labelCpuName.Refresh();
+                            labelCpuFreq.Refresh();
+                            labelCpuTemp.Refresh();
+                            labelCpuLoad.Refresh();
+                        }
                     }
-
-                    cpuName = hardware.Name;
-                    cpuFreq = (_freqSum / _coreCount / 1000).ToString("n2");
-                    cpuTemp = _cpuTemp.ToString("n1");
-                    cpuLoad = _cpuLoad.ToString("n1");
-
-                    if (this.Visible)
+                    else if (hardware.HardwareType == HardwareType.GpuNvidia || hardware.HardwareType == HardwareType.GpuAmd)
                     {
-                        // Dump the values to the labels as needed. Only done if the form is open.
-                        labelCpuName.Text = $"Name: {cpuName}";
-                        labelCpuFreq.Text = $"Freq: {cpuFreq} GHz";
-                        labelCpuTemp.Text = $"Temp: {cpuTemp} ° C";
-                        labelCpuLoad.Text = $"Load: {cpuLoad} %";
-                        // Show on screen, again as needed.
-                        labelCpuName.Refresh();
-                        labelCpuFreq.Refresh();
-                        labelCpuTemp.Refresh();
-                        labelCpuLoad.Refresh();
+                        // Now for gpu. We grab the clock speed of the core and ram, as well as their load
+
+                        decimal _gpuTemp = 0;
+
+                        decimal _gpuCoreLoad = 0;
+                        decimal _gpuCoreClock = 0;
+
+                        decimal _gpuVramLoad = 0;
+                        decimal _gpuVramClock = 0;
+
+                        foreach (ISensor sensor in hardware.Sensors)
+                        {
+                            if (sensor.SensorType == SensorType.Clock)
+                            {
+                                if (sensor.Name == "GPU Core")
+                                    _gpuCoreClock = (decimal)sensor.Value;
+                                else if (sensor.Name == "GPU Memory")
+                                    _gpuVramClock = (decimal)sensor.Value;
+                                /*else if (sensor.Name == "GPU Shader")
+                                    gpuShaderClock = (decimal)sensor.Value;*/
+                            }
+                            else if (sensor.SensorType == SensorType.Temperature && sensor.Name == "GPU Core")
+                            {
+                                _gpuTemp = (decimal)sensor.Value;
+                            }
+                            else if (sensor.SensorType == SensorType.Load)
+                            {
+                                if (sensor.Name == "GPU Core")
+                                    _gpuCoreLoad = (decimal)sensor.Value;
+                                else if (sensor.Name == "GPU Memory")
+                                    _gpuVramLoad = (decimal)sensor.Value;
+                            }
+                            /*else if (sensor.SensorType == SensorType.SmallData)
+                            {
+                                if (sensor.Name == "GPU Memory Used")
+                                    gpuMemoryUsed = (decimal)sensor.Value;
+                                else if (sensor.Name == "GPU Memory Total")
+                                    gpuMemoryTotal = (decimal)sensor.Value;
+                            }*/
+                        }
+
+                        gpuName = hardware.Name;
+                        gpuTemp = _gpuTemp.ToString("n1");
+                        gpuCoreLoad = _gpuCoreLoad.ToString("n1");
+                        gpuCoreClock = _gpuCoreClock.ToString("n1");
+                        gpuVramLoad = _gpuVramLoad.ToString("n1");
+                        gpuVramClock = _gpuVramClock.ToString("n1");
+
+                        if (this.Visible)
+                        {
+                            // Same here with the GPU, dump values and show them
+                            labelGpuName.Text = $"Name: {gpuName}";
+                            labelGpuTemp.Text = $"Temp: {gpuTemp} ° C";
+                            labelGpuCoreLoad.Text = $"Core Load: {gpuCoreLoad} %";
+                            labelGpuCoreClock.Text = $"Core Clock: {gpuCoreClock} MHz";
+                            labelGpuVramLoad.Text = $"VRAM Load: {gpuVramLoad} % used";
+                            labelGpuVramClock.Text = $"VRAM Clock: {gpuVramClock} MHz";
+
+                            labelGpuName.Refresh();
+                            labelGpuTemp.Refresh();
+                            labelGpuCoreLoad.Refresh();
+                            labelGpuCoreClock.Refresh();
+                            labelGpuVramClock.Refresh();
+                        }
+                    }
+                    else if (hardware.HardwareType == HardwareType.Memory)
+                    {
+                        decimal _ramUsed = 0;
+                        decimal _ramAvailable = 0;
+
+                        foreach (ISensor sensor in hardware.Sensors)
+                        {
+                            if (sensor.SensorType == SensorType.Data)
+                            {
+                                if (sensor.Name == "Memory Used")
+                                    _ramUsed = (decimal)sensor.Value;
+                                else if (sensor.Name == "Memory Available")
+                                    _ramAvailable = (decimal)sensor.Value;
+                            }
+                        }
+
+                        ramUsed = _ramUsed.ToString("n1");
+                        ramTotal = Decimal.Round(_ramUsed + _ramAvailable).ToString("n0");
+
+                        if (this.Visible)
+                        {
+                            // Lastly do the same with RAM
+                            labelRamUsed.Text = $"Used: {ramUsed} GB";
+                            labelRamTotal.Text = $"Total: {ramTotal} GB";
+
+                            labelRamUsed.Refresh();
+                            labelRamTotal.Refresh();
+                        }
                     }
                 }
-                else if (hardware.HardwareType == HardwareType.GpuNvidia || hardware.HardwareType == HardwareType.GpuAmd)
-                {
-                    // Now for gpu. We grab the clock speed of the core and ram, as well as their load
-
-                    decimal _gpuTemp = 0;
-
-                    decimal _gpuCoreLoad = 0;
-                    decimal _gpuCoreClock = 0;
-
-                    decimal _gpuVramLoad = 0;
-                    decimal _gpuVramClock = 0;
-
-                    foreach (ISensor sensor in hardware.Sensors)
-                    {
-                        if (sensor.SensorType == SensorType.Clock)
-                        {
-                            if (sensor.Name == "GPU Core")
-                                _gpuCoreClock = (decimal)sensor.Value;
-                            else if (sensor.Name == "GPU Memory")
-                                _gpuVramClock = (decimal)sensor.Value;
-                            /*else if (sensor.Name == "GPU Shader")
-                                gpuShaderClock = (decimal)sensor.Value;*/
-                        }
-                        else if (sensor.SensorType == SensorType.Temperature && sensor.Name == "GPU Core")
-                        {
-                            _gpuTemp = (decimal)sensor.Value;
-                        }
-                        else if (sensor.SensorType == SensorType.Load)
-                        {
-                            if (sensor.Name == "GPU Core")
-                                _gpuCoreLoad = (decimal)sensor.Value;
-                            else if (sensor.Name == "GPU Memory")
-                                _gpuVramLoad = (decimal)sensor.Value;
-                        }
-                        /*else if (sensor.SensorType == SensorType.SmallData)
-                        {
-                            if (sensor.Name == "GPU Memory Used")
-                                gpuMemoryUsed = (decimal)sensor.Value;
-                            else if (sensor.Name == "GPU Memory Total")
-                                gpuMemoryTotal = (decimal)sensor.Value;
-                        }*/
-                    }
-
-                    gpuName = hardware.Name;
-                    gpuTemp = _gpuTemp.ToString("n1");
-                    gpuCoreLoad = _gpuCoreLoad.ToString("n1");
-                    gpuCoreClock = _gpuCoreClock.ToString("n1");
-                    gpuVramLoad = _gpuVramLoad.ToString("n1");
-                    gpuVramClock = _gpuVramClock.ToString("n1");
-
-                    if (this.Visible)
-                    {
-                        // Same here with the GPU, dump values and show them
-                        labelGpuName.Text = $"Name: {gpuName}";
-                        labelGpuTemp.Text = $"Temp: {gpuTemp} ° C";
-                        labelGpuCoreLoad.Text = $"Core Load: {gpuCoreLoad} %";
-                        labelGpuCoreClock.Text = $"Core Clock: {gpuCoreClock} MHz";
-                        labelGpuVramLoad.Text = $"VRAM Load: {gpuVramLoad} % used";
-                        labelGpuVramClock.Text = $"VRAM Clock: {gpuVramClock} MHz";
-
-                        labelGpuName.Refresh();
-                        labelGpuTemp.Refresh();
-                        labelGpuCoreLoad.Refresh();
-                        labelGpuCoreClock.Refresh();
-                        labelGpuVramClock.Refresh();
-                    }
-                }
-                else if (hardware.HardwareType == HardwareType.Memory)
-                {
-                    decimal _ramUsed = 0;
-                    decimal _ramAvailable = 0;
-
-                    foreach (ISensor sensor in hardware.Sensors)
-                    {
-                        if (sensor.SensorType == SensorType.Data)
-                        {
-                            if (sensor.Name == "Memory Used")
-                                _ramUsed = (decimal)sensor.Value;
-                            else if (sensor.Name == "Memory Available")
-                                _ramAvailable = (decimal)sensor.Value;
-                        }
-                    }
-
-                    ramUsed = _ramUsed.ToString("n1");
-                    ramTotal = Decimal.Round(_ramUsed + _ramAvailable).ToString("n0");
-
-                    if (this.Visible)
-                    {
-                        // Lastly do the same with RAM
-                        labelRamUsed.Text = $"Used: {ramUsed} GB";
-                        labelRamTotal.Text = $"Total: {ramTotal} GB";
-
-                        labelRamUsed.Refresh();
-                        labelRamTotal.Refresh();
-                    }
-                }
-            }
-
-            // Unlock mutex, let the other thread use it now.
-            compMutex.ReleaseMutex();
+            } // Unlock mutex!
         }
 
         private void SerialComms()
@@ -238,19 +236,14 @@ namespace MaxStatsDesktop
 
                 // If serial is started, don't try to use it.
                 if (!serial.IsOpen) continue;
-                Console.WriteLine("hm");
+
                 if (sendmessage)
                 {
-                    Console.WriteLine("about to enter mutex area!");
-                    compMutex.WaitOne();
-                    Console.WriteLine("we're in.");
-                    Console.WriteLine("about to send");
-                    serial.Write(gpuName);
-                    sendmessage = false;
-                    Console.WriteLine("SentCdoe!");
-                    Console.WriteLine("about to exit mutex");
-                    compMutex.ReleaseMutex();
-                    Console.WriteLine("exited mutex.");
+                    lock (compMutex)
+                    {
+                        serial.Write(gpuName);
+                        sendmessage = false;
+                    }
                 }
 
                 int thebyte = 0;
@@ -266,11 +259,6 @@ namespace MaxStatsDesktop
                 // TODO: send ping to the device, then check for the response
                 // TODO: send the cpuName, gpuName, and ramTotal, wait for ack
                 // TODO: send the other data on loop every so often (1 second)
-                // Wait for mutex to unlock.
-                //compMutex.WaitOne();
-
-                // We're done here, stop blocking the other thread.
-                //compMutex.ReleaseMutex();
 
                 Thread.Sleep(1000);
             }
@@ -371,9 +359,37 @@ namespace MaxStatsDesktop
             (e.ClickedItem as ToolStripMenuItem).Checked = !(e.ClickedItem as ToolStripMenuItem).Checked;
 
             // Time to connect with serial!
-            serial.PortName = match.Groups[1].Value;
-            sendmessage = true;
-            serial.Open();
+            try
+            {
+                if (serial.IsOpen)
+                    serial.Close();
+                serial.PortName = match.Groups[1].Value;
+                sendmessage = true;
+                serial.Open();
+            }
+            catch (System.UnauthorizedAccessException)
+            {
+                sendmessage = false;
+                MessageBox.Show(
+                    "The serial device selected could not be opened." +
+                    " It may already be in use by another program.\n\nSorry!",
+                    "MaxStats Error: Failed to open serial device.",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error
+                );
+            }
+            catch (System.IO.IOException)
+            {
+                sendmessage = false;
+                MessageBox.Show(
+                    "The serial device selected is not responding to MaxStats." +
+                    " This could be due to the device not recognizing serial or the chip" + 
+                    " on the board may have gone bad and no longer functions.\n\nSorry!",
+                    "MaxStats Error: Failed to open serial device.",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error
+                );
+            }
         }
     }
 
