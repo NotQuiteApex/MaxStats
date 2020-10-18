@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Text;
@@ -17,16 +18,27 @@ namespace MaxStatsDesktop
 {
     public partial class MainForm : Form
     {
+        // For updating all the stats
         private Computer comp = new Computer
         {
             IsCpuEnabled = true,
             IsGpuEnabled = true,
             IsMemoryEnabled = true,
         };
-        private UpdateVisitor visitor = new UpdateVisitor();
+        private readonly UpdateVisitor _visitor = new UpdateVisitor();
+        
+        // For the pop up windows
+        private const string PopupFailedToOpen = "MaxStats Error: Failed to open serial device.";
+        private const string PopupNotActualSerial = "The serial device selected could not be opened. It" +
+                                                    " may not have been an actual serial device.\n\nSorry!";
+        private const string PopupSerialInUse = "The serial device selected could not be opened. It" +
+                                                " may already be in use by another program.\n\nSorry!";
+        private const string PopupSerialFailed = "The serial device selected is not responding to MaxStats. This" +
+                                                 " could be due to the device not recognizing serial or the chip" +
+                                                 " on the board may have gone bad and no longer functions.\n\nSorry!";
 
         // For closing via systray
-        private bool closing = false;
+        private bool _closing = false;
 
         // All the stats we send via serial.
         private string cpuName = "Unknown CPU";
@@ -46,8 +58,8 @@ namespace MaxStatsDesktop
 
         // Serial comms variables.
         private bool _continueComms = true;
-        private bool sendmessage = false;
-        private readonly object compMutex = new object();
+        private bool _sendmessage = false;
+        private readonly object _compMutex = new object();
         private SerialPort serial = new SerialPort();
         private Thread comms;
 
@@ -60,12 +72,11 @@ namespace MaxStatsDesktop
             UpdateComp();
 
             // Set up serial comms.
+            // Serial.begin(115200, SERIAL_8E2);
             comms = new Thread(SerialComms);
-            serial.BaudRate = 9600; // Serial.begin(9600);
+            serial.BaudRate = 9600;
             serial.DataBits = 8;
-            serial.Parity = Parity.Even;
-            serial.StopBits = StopBits.Two;
-            serial.Handshake = Handshake.None;
+            serial.StopBits = StopBits.One;
 
             comms.Start();
         }
@@ -73,13 +84,13 @@ namespace MaxStatsDesktop
         private void UpdateComp()
         {
             // Wait turn for mutex
-            lock (compMutex)
+            lock (_compMutex)
             {
                 // Update the sensors
-                comp.Accept(visitor);
+                comp.Accept(_visitor);
 
                 // Iterate through all the hardware
-                foreach (IHardware hardware in comp.Hardware)
+                foreach (var hardware in comp.Hardware)
                 {
                     // Let's check each of the hardwarez
                     if (hardware.HardwareType == HardwareType.Cpu)
@@ -89,9 +100,9 @@ namespace MaxStatsDesktop
                         decimal _freqSum = 0;
                         decimal _cpuTemp = 0;
                         decimal _cpuLoad = 0;
-                        int _coreCount = 0;
+                        byte _coreCount = 0;
 
-                        foreach (ISensor sensor in hardware.Sensors)
+                        foreach (var sensor in hardware.Sensors)
                         {
                             if (sensor.SensorType == SensorType.Clock && sensor.Name != "Bus Speed")
                             {
@@ -106,8 +117,6 @@ namespace MaxStatsDesktop
                             {
                                 _cpuLoad = (decimal)sensor.Value;
                             }
-
-                            //Console.WriteLine("{0}, {1}: {2}", sensor.Name, sensor.SensorType, sensor.Value);
                         }
 
                         cpuName = hardware.Name;
@@ -127,7 +136,7 @@ namespace MaxStatsDesktop
                         decimal _gpuVramLoad = 0;
                         decimal _gpuVramClock = 0;
 
-                        foreach (ISensor sensor in hardware.Sensors)
+                        foreach (var sensor in hardware.Sensors)
                         {
                             if (sensor.SensorType == SensorType.Clock)
                             {
@@ -170,7 +179,7 @@ namespace MaxStatsDesktop
                         decimal _ramUsed = 0;
                         decimal _ramAvailable = 0;
 
-                        foreach (ISensor sensor in hardware.Sensors)
+                        foreach (var sensor in hardware.Sensors)
                         {
                             if (sensor.SensorType == SensorType.Data)
                             {
@@ -226,27 +235,26 @@ namespace MaxStatsDesktop
         {
             while (_continueComms)
             {
-
                 // If serial is started, don't try to use it.
                 if (!serial.IsOpen) continue;
 
-                if (sendmessage)
+                if (_sendmessage)
                 {
-                    lock (compMutex)
+                    lock (_compMutex)
                     {
                         serial.Write(gpuName);
-                        sendmessage = false;
+                        _sendmessage = false;
                     }
                 }
 
-                int thebyte = 0;
+                //Console.WriteLine($"BytesToRead: {serial.BytesToRead}");
                 while (serial.BytesToRead > 0)
                 {
-                    thebyte = serial.ReadByte();
+                    int thebyte = serial.ReadByte();
                     if (thebyte != -1)
                         Console.Write((char)thebyte);
                     else
-                        Console.WriteLine();
+                        Console.WriteLine("");
                 }
 
                 // TODO: send ping to the device, then check for the response
@@ -282,8 +290,9 @@ namespace MaxStatsDesktop
             if (serial.IsOpen) serial.Close();
 
             // Close the program
-            closing = true;
+            _closing = true;
             this.Close();
+            Environment.Exit(0);
         }
 
         private void showToolStripMenuItem_Click(object sender, EventArgs e)
@@ -296,7 +305,7 @@ namespace MaxStatsDesktop
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
         {
             // Program won't close unless closed from the systray
-            if (e.CloseReason == CloseReason.UserClosing && !closing)
+            if (e.CloseReason == CloseReason.UserClosing && !_closing)
             {
                 this.Hide();
                 trayIcon.Visible = true;
@@ -307,30 +316,33 @@ namespace MaxStatsDesktop
         private void trayMenu_Opening(object sender, CancelEventArgs e)
         {
             // Manage items by changes in the list.
-            List<string> coms = new List<string>();
+            var coms = new List<string>();
 
             // Window's BS way of getting the friendly name of all the serial devices.
-            ManagementObjectSearcher searcher = new ManagementObjectSearcher("root\\CIMV2", "SELECT * FROM Win32_PnPEntity WHERE ClassGuid='{4d36e978-e325-11ce-bfc1-08002be10318}'");
-            foreach (ManagementObject m in searcher.Get())
+            var searcher = new ManagementObjectSearcher("root\\CIMV2",
+                "SELECT * FROM Win32_PnPEntity WHERE ClassGuid='{4d36e978-e325-11ce-bfc1-08002be10318}'");
+            foreach (var o in searcher.Get())
+            {
+                var m = (ManagementObject) o;
                 coms.Add(m["Name"].ToString());
+            }
 
             // If any of the items no longer exist (COM's disconnected) or the options are satic, remove them from the list.
-            for (int i = trayMenu.Items.Count-1; i >= 0; i--)
+            for (var i = trayMenu.Items.Count-1; i >= 0; i--)
             {
-                ToolStripItem s = trayMenu.Items[i];
+                var s = trayMenu.Items[i];
                 if ((string)s.Tag != "important" && coms.IndexOf(s.Text) == -1)
                     trayMenu.Items.Remove(s);
             }
 
             // Go through each COM, check if it exists in the list, and if not add it.
-            foreach (string s in coms)
+            foreach (var s in coms)
             {
-                var item = new ToolStripMenuItem();
-                item.Text = s;
-                bool shouldadd = true;
-                for (int i = trayMenu.Items.Count - 1; i >= 0; i--)
+                var item = new ToolStripMenuItem {Text = s};
+                var shouldadd = true;
+                for (var i = trayMenu.Items.Count - 1; i >= 0; i--)
                 {
-                    ToolStripItem t = trayMenu.Items[i];
+                    var t = trayMenu.Items[i];
                     if (t.Text == s)
                         shouldadd = false;
                 }
@@ -342,26 +354,25 @@ namespace MaxStatsDesktop
         private void trayMenu_ItemClicked(object sender, ToolStripItemClickedEventArgs e)
         {
             // Grab the COM name from the list via regex
-            string comchosen = e.ClickedItem.Text;
-            Match match = Regex.Match(comchosen, @"[a-zA-Z\ ]+\((COM[0-9]+)\)", RegexOptions.IgnoreCase);
+            var comchosen = e.ClickedItem.Text;
+            var match = Regex.Match(comchosen, @"[a-zA-Z\ ]+\((COM[0-9]+)\)", RegexOptions.IgnoreCase);
+
+            if (comchosen == "Show stats" || comchosen == "Exit")
+            {
+                return;
+            }
 
             // Uh oh!
             if (!match.Success)
             {
                 MessageBox.Show(
-                    "The serial device selected could not be opened. It" +
-                    " may not have been an actual serial device.\n\nSorry!",
-                    "MaxStats Error: Failed to open serial device.",
+                    PopupNotActualSerial,
+                    PopupFailedToOpen,
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error
                 );
                 return;
             }
-
-            // Disable the rest of the checkmarks on the items.
-            foreach(ToolStripItem t in trayMenu.Items) (t as ToolStripMenuItem).Checked = (t as ToolStripMenuItem).Checked && true;
-            // Change the selected item's checkmark
-            (e.ClickedItem as ToolStripMenuItem).Checked = !(e.ClickedItem as ToolStripMenuItem).Checked;
 
             // Time to connect with serial!
             try
@@ -369,32 +380,38 @@ namespace MaxStatsDesktop
                 if (serial.IsOpen)
                     serial.Close();
                 serial.PortName = match.Groups[1].Value;
-                sendmessage = true;
+                Console.WriteLine('"' + match.Groups[1].Value + '"');
                 serial.Open();
             }
             catch (System.UnauthorizedAccessException)
             {
-                sendmessage = false;
                 MessageBox.Show(
-                    "The serial device selected could not be opened. It" +
-                    " may already be in use by another program.\n\nSorry!",
-                    "MaxStats Error: Failed to open serial device.",
+                    PopupSerialInUse,
+                    PopupFailedToOpen,
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error
                 );
+                return;
             }
             catch (System.IO.IOException)
             {
-                sendmessage = false;
                 MessageBox.Show(
-                    "The serial device selected is not responding to MaxStats. This" +
-                    " could be due to the device not recognizing serial or the chip" + 
-                    " on the board may have gone bad and no longer functions.\n\nSorry!",
-                    "MaxStats Error: Failed to open serial device.",
+                    PopupSerialFailed,
+                    PopupFailedToOpen,
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error
                 );
+                return;
             }
+
+            // Temporary variable for the checked item.
+            bool shouldCheck = !((ToolStripMenuItem)e.ClickedItem).Checked;
+            // Disable the rest of the checkmarks on the items.
+            foreach (ToolStripItem t in trayMenu.Items)
+                ((ToolStripMenuItem) t).Checked = false;
+            // Change the selected item's checkmark
+            ((ToolStripMenuItem) e.ClickedItem).Checked = shouldCheck;
+            _sendmessage = shouldCheck;
         }
     }
 
@@ -408,7 +425,7 @@ namespace MaxStatsDesktop
         public void VisitHardware(IHardware hardware)
         {
             hardware.Update();
-            foreach (IHardware subHardware in hardware.SubHardware) subHardware.Accept(this);
+            foreach (var subHardware in hardware.SubHardware) subHardware.Accept(this);
         }
         public void VisitSensor(ISensor sensor) { }
         public void VisitParameter(IParameter parameter) { }

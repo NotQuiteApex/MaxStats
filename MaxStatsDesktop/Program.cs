@@ -16,7 +16,7 @@ namespace MaxStatsDesktop
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            MainForm mainForm = new MainForm();
+            var mainForm = new MainForm();
             Application.Run();
         }
     }
