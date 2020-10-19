@@ -56,12 +56,22 @@ namespace MaxStatsDesktop
         private string ramUsed  = "0";
         private string ramTotal = "0";
 
+        // The stages of denial-- I mean communications.
+        enum SerialStage
+        {
+            Handshake,
+            ComputerParts,
+            ContinuousStats,
+        }
+
         // Serial comms variables.
         private bool _continueComms = true;
         private bool _sendmessage = false;
         private readonly object _compMutex = new object();
         private SerialPort serial = new SerialPort();
         private Thread comms;
+        private SerialStage stage = SerialStage.Handshake;
+        private byte stagepart = 0;
 
         public MainForm()
         {
@@ -74,9 +84,11 @@ namespace MaxStatsDesktop
             // Set up serial comms.
             // Serial.begin(115200, SERIAL_8E2);
             comms = new Thread(SerialComms);
-            serial.BaudRate = 9600;
+            serial.BaudRate = 115200;
             serial.DataBits = 8;
-            serial.StopBits = StopBits.One;
+            serial.Parity = Parity.Even;
+            serial.StopBits = StopBits.Two;
+            serial.Handshake = Handshake.None;
 
             comms.Start();
         }
@@ -238,31 +250,53 @@ namespace MaxStatsDesktop
                 // If serial is started, don't try to use it.
                 if (!serial.IsOpen) continue;
 
-                if (_sendmessage)
+                if (stage == SerialStage.Handshake)
                 {
-                    lock (_compMutex)
+                    // First, send a message to the device
+                    if (stagepart == 0)
                     {
-                        serial.Write(gpuName);
-                        _sendmessage = false;
+                        serial.Write("010");
+                        stagepart = 1;
                     }
-                }
+                    // Next, wait for a response. If one isn't recieved in 5 seconds, restart.
+                    else if (stagepart == 1)
+                    {
+                        var check = Task.Run(() =>
+                        {
+                            string complete = "";
+                            while (serial.BytesToRead > 0)
+                            {
+                                int thebyte = serial.ReadByte();
+                                if (thebyte != -1)
+                                    complete += (char)thebyte;
 
-                //Console.WriteLine($"BytesToRead: {serial.BytesToRead}");
-                while (serial.BytesToRead > 0)
+                                if (complete == "101") return;
+                            }
+                        });
+
+                        if (check.Wait(TimeSpan.FromSeconds(5)))
+                        {
+                            stage = SerialStage.ComputerParts;
+                            stagepart = 0;
+                        }
+                        else
+                        {
+                            stage = SerialStage.Handshake;
+                            stagepart = 0;
+                        }
+                    }    
+                }
+                else if (stage == SerialStage.ComputerParts)
                 {
-                    int thebyte = serial.ReadByte();
-                    if (thebyte != -1)
-                        Console.Write((char)thebyte);
-                    else
-                        Console.WriteLine("");
+                    Console.WriteLine("We're here!");
+                }
+                else if (stage == SerialStage.ContinuousStats)
+                {
+
                 }
 
-                // TODO: send ping to the device, then check for the response
-                // TODO: send the cpuName, gpuName, and ramTotal, wait for ack
-                // TODO: send the other data on loop every so often (1 second)
-
-                // Sleep for a sec, we don't need to spam the serial pipe.
-                Thread.Sleep(1000);
+                // Sleep for a moment, we don't need to spam the serial pipe.
+                Thread.Sleep(50);
             }
         }
 
