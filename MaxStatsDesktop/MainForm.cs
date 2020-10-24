@@ -89,6 +89,8 @@ namespace MaxStatsDesktop
             serial.Parity = Parity.Even;
             serial.StopBits = StopBits.Two;
             serial.Handshake = Handshake.None;
+            serial.DtrEnable = true;
+            serial.RtsEnable = true;
 
             comms.Start();
         }
@@ -264,13 +266,16 @@ namespace MaxStatsDesktop
                         var check = Task.Run(() =>
                         {
                             string complete = "";
-                            while (serial.BytesToRead > 0)
+                            while (true)
                             {
-                                int thebyte = serial.ReadByte();
-                                if (thebyte != -1)
-                                    complete += (char)thebyte;
+                                while (serial.BytesToRead > 0)
+                                {
+                                    int thebyte = serial.ReadByte();
+                                    if (thebyte != -1)
+                                        complete += (char)thebyte;
 
-                                if (complete == "101") return;
+                                    if (complete == "101") return;
+                                }
                             }
                         });
 
