@@ -3,13 +3,24 @@
  * Showing PC stats from a tiny screen *
 \***************************************/
 
+// Standard include, because we use Arduino in the household.
 #include <Arduino.h>
 
+// Include config and macro stuffs
+#include "macros.h"
 #include "config.h"
 
-#include <Adafruit_ST7735.h>
-//#include <Adafruit_ST7789.h>
-//#include <Adafruit_ST77xx.h>
+#ifndef SCR_TYPE
+  #error SCRTYPE must be defined in `config.h`!
+#elif SCR_TYPE == SCR_7735
+  #include <Adafruit_ST7735.h>
+  Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_RST);
+#elif SCR_TYPE == SCR_7789
+  #include <Adafruit_ST7789.h>
+  Adafruit_ST7789 tft = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
+#else
+  #error SCR_TYPE must be defined properly in `config.h`!
+#endif
 
 #include "serialhelp.h"
 
@@ -27,9 +38,11 @@ int commstagepart;
 String inputString = "";
 
 // Data we store!
+// Data that we receive only at the time a connection is made.
 String cpuName = "";
 String gpuName = "";
 String ramCount = "";
+// Data we constantly receive after a connection is made.
 
 void setup() {
   // Set up serial communication for the board
@@ -45,9 +58,18 @@ void setup() {
 
   // Reserve some space for the string
   inputString.reserve(200);
+
+  // Set up the TFT
+  delay(200);
+  tft.initR(INITR_GREENTAB);
+  tft.setRotation(SCR_ROTATE);
+  tft.fillScreen(ST7735_BLACK);
+  tft.setTextColor(ST7735_WHITE);
+  tft.setTextWrap(true);
 }
 
 void loop() {
+  tft.fillScreen(ST7735_BLACK);
   if (commstage == SerialStage::Handshake)
   {
     if (commstagepart == 0) {
@@ -63,45 +85,33 @@ void loop() {
   else if (commstage == SerialStage::ComputerParts)
   {
     if (commstagepart == 0) {
-      // wait for info on cpu, gpu, and ram
-      serial_recieve();
-      if (!inputString.equals("")) {
-        // process the names!
-        String temp = "";
-        temp.reserve(32);
-        unsigned int idx1 = 0;
-        unsigned int idx2 = 0;
-        byte count = 0;
-
-        // Loop through the string, finding the pipe seperators
-        for (int i = 0; i < inputString.length(); i++) {
-          if (inputString[i] == '|') {
-            idx1 = idx2;
-            if (inputString[idx1] == '|')
-              idx1++;
-            idx2 = i;
-
-            temp = inputString.substring(idx1, idx2);
-
-            if (count == 0)
-              cpuName = temp;
-            else if (count == 1)
-              gpuName = temp;
-            else if (count == 2)
-              ramCount = temp;
-
-            count++;
-          }
-        }
-
+      // wait for info on CPU, GPU, and RAM
+      if (receive_once_data()) {
         commstagepart = 1;
       }
     } else if (commstagepart == 1) {
-
+      // respond that we got it, and move to the next stage
+      Serial.write("222");
+      commstage = SerialStage::ContinuousStats;
+      commstagepart = 0;
     }
   }
   else if (commstage == SerialStage::ContinuousStats)
   {
+    // Format string of continuous stats
+    // $"{cpuFreq}|{cpuTemp}|{cpuLoad}|{ramUsed}|{gpuTemp}|" +
+    // $"{gpuCoreClock}|{gpuCoreLoad}|{gpuVramClock}|{gpuVramLoad}|"
 
+    if (commstagepart == 0) {
+      // recieve
+    } else if (commstagepart == 1) {
+      // respond with "333"
+    }
   }
+
+  tft.setCursor(0, 00); tft.print(cpuName);
+  tft.setCursor(0, 10); tft.print(gpuName);
+  tft.setCursor(0, 20); tft.print(ramCount);
+
+  delay(1000);
 }

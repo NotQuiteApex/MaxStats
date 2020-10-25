@@ -293,11 +293,84 @@ namespace MaxStatsDesktop
                 }
                 else if (stage == SerialStage.ComputerParts)
                 {
-                    Console.WriteLine("We're here!");
+                    //Console.WriteLine("We're here!");
+                    if (stagepart == 0)
+                    {
+                        lock (_compMutex)
+                        {
+                            serial.Write($"{cpuName}|{gpuName}|{ramTotal}GB|");
+                        }
+                    }
+                    else if (stagepart == 1)
+                    {
+                        var check = Task.Run(() =>
+                        {
+                            string complete = "";
+                            while (true)
+                            {
+                                while (serial.BytesToRead > 0)
+                                {
+                                    int thebyte = serial.ReadByte();
+                                    if (thebyte != -1)
+                                        complete += (char)thebyte;
+
+                                    if (complete == "222") return;
+                                }
+                            }
+                        });
+
+                        if (check.Wait(TimeSpan.FromSeconds(5)))
+                        {
+                            stage = SerialStage.ContinuousStats;
+                            stagepart = 0;
+                        }
+                        else
+                        {
+                            stage = SerialStage.Handshake;
+                            stagepart = 0;
+                        }
+                    }
                 }
                 else if (stage == SerialStage.ContinuousStats)
                 {
+                    if (stagepart == 0)
+                    {
+                        lock (_compMutex)
+                        {
+                            serial.Write($"{cpuFreq}|{cpuTemp}|{cpuLoad}|{ramUsed}|{gpuTemp}|" +
+                                $"{gpuCoreClock}|{gpuCoreLoad}|{gpuVramClock}|{gpuVramLoad}|");
+                        }
+                    }
+                    else if (stagepart == 1)
+                    {
+                        // wait for response "333" for 5 seconds, if nothing then restart
+                        var check = Task.Run(() =>
+                        {
+                            string complete = "";
+                            while (true)
+                            {
+                                while (serial.BytesToRead > 0)
+                                {
+                                    int thebyte = serial.ReadByte();
+                                    if (thebyte != -1)
+                                        complete += (char)thebyte;
 
+                                    if (complete == "333") return;
+                                }
+                            }
+                        });
+
+                        if (check.Wait(TimeSpan.FromSeconds(5)))
+                        {
+                            stage = SerialStage.ContinuousStats;
+                            stagepart = 0;
+                        }
+                        else
+                        {
+                            stage = SerialStage.Handshake;
+                            stagepart = 0;
+                        }
+                    }
                 }
 
                 // Sleep for a moment, we don't need to spam the serial pipe.
