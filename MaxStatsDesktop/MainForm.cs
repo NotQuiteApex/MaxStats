@@ -293,7 +293,6 @@ namespace MaxStatsDesktop
                 }
                 else if (stage == SerialStage.ComputerParts)
                 {
-                    //Console.WriteLine("We're here!");
                     if (stagepart == 0)
                     {
                         lock (_compMutex)
@@ -495,7 +494,6 @@ namespace MaxStatsDesktop
                 if (serial.IsOpen)
                     serial.Close();
                 serial.PortName = match.Groups[1].Value;
-                Console.WriteLine('"' + match.Groups[1].Value + '"');
                 serial.Open();
             }
             catch (System.UnauthorizedAccessException)

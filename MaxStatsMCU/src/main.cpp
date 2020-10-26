@@ -59,6 +59,7 @@ String gpuVramLoad = "-";
 
 // error checker, if this goes up to a certain amount, reset everything.
 byte errorcount = 0;
+bool connected = false;
 
 void setup()
 {
@@ -110,6 +111,7 @@ void loop()
   if (errorcount >= 5)
   {
     errorcount = 0;
+    connected = false;
 
     commstage = SerialStage::Handshake;
     commstagepart = 0;
@@ -145,6 +147,7 @@ void loop()
       commstage = SerialStage::ComputerParts;
       commstagepart = 0;
       shouldwait = false;
+      connected = true;
     }
   }
   else if (commstage == SerialStage::ComputerParts)
@@ -194,19 +197,30 @@ void loop()
 
   if (shouldwait)
   {
-    tft.setCursor(0, 00); tft.print("CPU: " + cpuName);
-    tft.setCursor(0, 10); tft.print("Freq: " + cpuFreq + " GHz");
-    tft.setCursor(0, 20); tft.print("Load: " + cpuLoad + " %");
-    tft.setCursor(0, 30); tft.print("Temp: " + cpuTemp + " \xF7 C");
+    if (connected) {
+      tft.setCursor(0, 00); tft.print(cpuName);
+      tft.setCursor(0, 10); tft.print("Freq: " + cpuFreq + " GHz");
+      tft.setCursor(0, 20); tft.print("Load: " + cpuLoad + " %");
+      tft.setCursor(0, 30); tft.print("Temp: " + cpuTemp + " \xF7 C");
 
-    tft.setCursor(0, 50); tft.print("GPU: " + gpuName);
-    tft.setCursor(0, 60); tft.print("Temp: " + gpuTemp + " \xF7 C");
-    tft.setCursor(0, 70); tft.print("Core Clock: " + gpuCoreClock + " MHz");
-    tft.setCursor(0, 80); tft.print("Core Load: " + gpuCoreLoad + " %");
-    tft.setCursor(0, 90); tft.print("VRAM Clock: " + gpuVramClock + " MHz");
-    tft.setCursor(0, 100); tft.print("VRAM Load: " + gpuVramLoad + " %");
+      tft.setCursor(0, 50); tft.print(gpuName);
+      tft.setCursor(0, 60); tft.print("Temp: " + gpuTemp + " \xF7 C");
+      tft.setCursor(0, 70); tft.print("Core Clock: " + gpuCoreClock + " MHz");
+      tft.setCursor(0, 80); tft.print("Core Load: " + gpuCoreLoad + " %");
+      tft.setCursor(0, 90); tft.print("VRAM Clock: " + gpuVramClock + " MHz");
+      tft.setCursor(0, 100); tft.print("VRAM Load: " + gpuVramLoad + " %");
+      
+      tft.setCursor(0, 120); tft.print("RAM: " + ramUsed + " / " + ramCount);
+    }
+    else
+    {
+      tft.setCursor(55, 50);
+      tft.print("MaxStats");
+      tft.setCursor(5, 60);
+      tft.print("Waiting for connection...");
+      delay(4000);
+    }
 
-    tft.setCursor(0, 120); tft.print("RAM: " + ramUsed + " / " + ramCount);
 
     delay(1000);
   }
