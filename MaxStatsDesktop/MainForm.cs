@@ -300,6 +300,7 @@ namespace MaxStatsDesktop
                         {
                             serial.Write($"{cpuName}|{gpuName}|{ramTotal}GB|");
                         }
+                        stagepart = 1;
                     }
                     else if (stagepart == 1)
                     {
@@ -333,6 +334,7 @@ namespace MaxStatsDesktop
                 }
                 else if (stage == SerialStage.ContinuousStats)
                 {
+
                     if (stagepart == 0)
                     {
                         lock (_compMutex)
@@ -340,6 +342,7 @@ namespace MaxStatsDesktop
                             serial.Write($"{cpuFreq}|{cpuTemp}|{cpuLoad}|{ramUsed}|{gpuTemp}|" +
                                 $"{gpuCoreClock}|{gpuCoreLoad}|{gpuVramClock}|{gpuVramLoad}|");
                         }
+                        stagepart = 1;
                     }
                     else if (stagepart == 1)
                     {
