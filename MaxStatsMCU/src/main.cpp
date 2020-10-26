@@ -194,19 +194,19 @@ void loop()
 
   if (shouldwait)
   {
-    tft.setCursor(0, 00); tft.print(cpuName);
-    tft.setCursor(0, 10); tft.print(cpuFreq + " GHz");
-    tft.setCursor(0, 20); tft.print(cpuTemp + " \xB0 C");
-    tft.setCursor(0, 30); tft.print(cpuLoad + " %");
+    tft.setCursor(0, 00); tft.print("CPU: " + cpuName);
+    tft.setCursor(0, 10); tft.print("Freq: " + cpuFreq + " GHz");
+    tft.setCursor(0, 20); tft.print("Load: " + cpuLoad + " %");
+    tft.setCursor(0, 30); tft.print("Temp: " + cpuTemp + " \xF7 C");
 
-    tft.setCursor(0, 50); tft.print(gpuName);
-    tft.setCursor(0, 60); tft.print(gpuTemp + " \xB0 C");
-    tft.setCursor(0, 70); tft.print(gpuCoreClock + " MHz");
-    tft.setCursor(0, 80); tft.print(gpuCoreLoad + " %");
-    tft.setCursor(0, 90); tft.print(gpuVramClock + " MHz");
-    tft.setCursor(0, 100); tft.print(gpuVramLoad + " %");
+    tft.setCursor(0, 50); tft.print("GPU: " + gpuName);
+    tft.setCursor(0, 60); tft.print("Temp: " + gpuTemp + " \xF7 C");
+    tft.setCursor(0, 70); tft.print("Core Clock: " + gpuCoreClock + " MHz");
+    tft.setCursor(0, 80); tft.print("Core Load: " + gpuCoreLoad + " %");
+    tft.setCursor(0, 90); tft.print("VRAM Clock: " + gpuVramClock + " MHz");
+    tft.setCursor(0, 100); tft.print("VRAM Load: " + gpuVramLoad + " %");
 
-    tft.setCursor(0, 120); tft.print(ramUsed + " / " + ramCount);
+    tft.setCursor(0, 120); tft.print("RAM: " + ramUsed + " / " + ramCount);
 
     delay(1000);
   }
