@@ -250,7 +250,12 @@ namespace MaxStatsDesktop
             while (_continueComms)
             {
                 // If serial is started, don't try to use it.
-                if (!serial.IsOpen) continue;
+                // TODO: lock the serial object when doing comms so it doesnt get interrupted mid-write.
+                if (!serial.IsOpen)
+                {
+                    Thread.Sleep(1000); // just so CPU usage doesn't spike.
+                    continue;
+                }
 
                 if (stage == SerialStage.Handshake)
                 {
@@ -263,21 +268,7 @@ namespace MaxStatsDesktop
                     // Next, wait for a response. If one isn't recieved in 5 seconds, restart.
                     else if (stagepart == 1)
                     {
-                        var check = Task.Run(() =>
-                        {
-                            string complete = "";
-                            while (true)
-                            {
-                                while (serial.BytesToRead > 0)
-                                {
-                                    int thebyte = serial.ReadByte();
-                                    if (thebyte != -1)
-                                        complete += (char)thebyte;
-
-                                    if (complete == "101") return;
-                                }
-                            }
-                        });
+                        var check = Task.Run(() => SerialResponse("101"));
 
                         if (check.Wait(TimeSpan.FromSeconds(5)))
                         {
@@ -303,21 +294,7 @@ namespace MaxStatsDesktop
                     }
                     else if (stagepart == 1)
                     {
-                        var check = Task.Run(() =>
-                        {
-                            string complete = "";
-                            while (true)
-                            {
-                                while (serial.BytesToRead > 0)
-                                {
-                                    int thebyte = serial.ReadByte();
-                                    if (thebyte != -1)
-                                        complete += (char)thebyte;
-
-                                    if (complete == "222") return;
-                                }
-                            }
-                        });
+                        var check = Task.Run(() => SerialResponse("222"));
 
                         if (check.Wait(TimeSpan.FromSeconds(5)))
                         {
@@ -346,21 +323,7 @@ namespace MaxStatsDesktop
                     else if (stagepart == 1)
                     {
                         // wait for response "333" for 5 seconds, if nothing then restart
-                        var check = Task.Run(() =>
-                        {
-                            string complete = "";
-                            while (true)
-                            {
-                                while (serial.BytesToRead > 0)
-                                {
-                                    int thebyte = serial.ReadByte();
-                                    if (thebyte != -1)
-                                        complete += (char)thebyte;
-
-                                    if (complete == "333") return;
-                                }
-                            }
-                        });
+                        var check = Task.Run(() => SerialResponse("333"));
 
                         if (check.Wait(TimeSpan.FromSeconds(5)))
                         {
@@ -376,7 +339,24 @@ namespace MaxStatsDesktop
                 }
 
                 // Sleep for a moment, we don't need to spam the serial pipe.
-                Thread.Sleep(50);
+                Thread.Sleep(500);
+            }
+        }
+
+        private void SerialResponse(string expected)
+        {
+            string complete = "";
+            while (true)
+            {
+                while (serial.BytesToRead > 0)
+                {
+                    int thebyte = serial.ReadByte();
+                    if (thebyte != -1)
+                        complete += (char)thebyte;
+
+                    if (complete == expected) return;
+                }
+                Thread.Sleep(25);
             }
         }
 

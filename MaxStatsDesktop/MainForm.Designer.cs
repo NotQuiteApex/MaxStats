@@ -50,12 +50,12 @@ namespace MaxStatsDesktop
             this.labelRamUsed = new System.Windows.Forms.Label();
             this.trayIcon = new System.Windows.Forms.NotifyIcon(this.components);
             this.trayMenu = new System.Windows.Forms.ContextMenuStrip(this.components);
+            this.maxStatsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
+            this.toolStripMenuItem2 = new System.Windows.Forms.ToolStripSeparator();
             this.showToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem1 = new System.Windows.Forms.ToolStripSeparator();
             this.exitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.maxStatsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.toolStripMenuItem2 = new System.Windows.Forms.ToolStripSeparator();
             this.cpuGroup.SuspendLayout();
             this.gpuGroup.SuspendLayout();
             this.ramGroup.SuspendLayout();
@@ -65,7 +65,7 @@ namespace MaxStatsDesktop
             // updatetick
             // 
             this.updatetick.Enabled = true;
-            this.updatetick.Interval = 250;
+            this.updatetick.Interval = 1000;
             this.updatetick.Tick += new System.EventHandler(this.updatetick_Tick);
             // 
             // titleText
@@ -241,19 +241,32 @@ namespace MaxStatsDesktop
             this.toolStripMenuItem1,
             this.exitToolStripMenuItem});
             this.trayMenu.Name = "trayMenu";
-            this.trayMenu.Size = new System.Drawing.Size(181, 110);
+            this.trayMenu.Size = new System.Drawing.Size(131, 88);
             this.trayMenu.Opening += new System.ComponentModel.CancelEventHandler(this.trayMenu_Opening);
             this.trayMenu.ItemClicked += new System.Windows.Forms.ToolStripItemClickedEventHandler(this.trayMenu_ItemClicked);
+            // 
+            // maxStatsToolStripMenuItem
+            // 
+            this.maxStatsToolStripMenuItem.Font = new System.Drawing.Font("Segoe UI", 9F, ((System.Drawing.FontStyle)((System.Drawing.FontStyle.Bold | System.Drawing.FontStyle.Underline))), System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.maxStatsToolStripMenuItem.Name = "maxStatsToolStripMenuItem";
+            this.maxStatsToolStripMenuItem.Size = new System.Drawing.Size(130, 22);
+            this.maxStatsToolStripMenuItem.Tag = "important";
+            this.maxStatsToolStripMenuItem.Text = "MaxStats";
             // 
             // toolStripSeparator1
             // 
             this.toolStripSeparator1.Name = "toolStripSeparator1";
-            this.toolStripSeparator1.Size = new System.Drawing.Size(177, 6);
+            this.toolStripSeparator1.Size = new System.Drawing.Size(127, 6);
+            // 
+            // toolStripMenuItem2
+            // 
+            this.toolStripMenuItem2.Name = "toolStripMenuItem2";
+            this.toolStripMenuItem2.Size = new System.Drawing.Size(127, 6);
             // 
             // showToolStripMenuItem
             // 
             this.showToolStripMenuItem.Name = "showToolStripMenuItem";
-            this.showToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.showToolStripMenuItem.Size = new System.Drawing.Size(130, 22);
             this.showToolStripMenuItem.Tag = "important";
             this.showToolStripMenuItem.Text = "Show stats";
             this.showToolStripMenuItem.Click += new System.EventHandler(this.showToolStripMenuItem_Click);
@@ -261,28 +274,15 @@ namespace MaxStatsDesktop
             // toolStripMenuItem1
             // 
             this.toolStripMenuItem1.Name = "toolStripMenuItem1";
-            this.toolStripMenuItem1.Size = new System.Drawing.Size(177, 6);
+            this.toolStripMenuItem1.Size = new System.Drawing.Size(127, 6);
             // 
             // exitToolStripMenuItem
             // 
             this.exitToolStripMenuItem.Name = "exitToolStripMenuItem";
-            this.exitToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.exitToolStripMenuItem.Size = new System.Drawing.Size(130, 22);
             this.exitToolStripMenuItem.Tag = "important";
             this.exitToolStripMenuItem.Text = "Exit";
             this.exitToolStripMenuItem.Click += new System.EventHandler(this.exitToolStripMenuItem_Click);
-            // 
-            // maxStatsToolStripMenuItem
-            // 
-            this.maxStatsToolStripMenuItem.Font = new System.Drawing.Font("Segoe UI", 9F, ((System.Drawing.FontStyle)((System.Drawing.FontStyle.Bold | System.Drawing.FontStyle.Underline))), System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.maxStatsToolStripMenuItem.Name = "maxStatsToolStripMenuItem";
-            this.maxStatsToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.maxStatsToolStripMenuItem.Tag = "important";
-            this.maxStatsToolStripMenuItem.Text = "MaxStats";
-            // 
-            // toolStripMenuItem2
-            // 
-            this.toolStripMenuItem2.Name = "toolStripMenuItem2";
-            this.toolStripMenuItem2.Size = new System.Drawing.Size(177, 6);
             // 
             // MainForm
             // 
