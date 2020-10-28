@@ -1,0 +1,2 @@
+# MaxStats 3D Print Files
+These parts were designed to fit a [Pro Micro board](https://www.sparkfun.com/products/12640) (or equivalents from AliExpress) (with the USB facing downward) and wires. I recommend printing the screen plate face down, and the body on its solid side with supports for the USB housing. The screen is held in with some friction from the body, no screws. If you feel it necessary, put some glue on the sides of the body where the screen parts meet.
