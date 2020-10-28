@@ -14,10 +14,10 @@
   #error SCRTYPE must be defined in `config.h`!
 #elif SCR_TYPE == SCR_7735
   #include <Adafruit_ST7735.h>
-  Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_RST);
+  Adafruit_ST7735 tft = Adafruit_ST7735(PIN_CS, PIN_DC, PIN_RST);
 #elif SCR_TYPE == SCR_7789
   #include <Adafruit_ST7789.h>
-  Adafruit_ST7789 tft = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
+  Adafruit_ST7789 tft = Adafruit_ST7789(PIN_CS, PIN_DC, PIN_RST);
 #else
   #error SCR_TYPE must be defined properly in `config.h`!
 #endif
@@ -57,6 +57,14 @@ String gpuCoreLoad = "-";
 String gpuVramClock = "-";
 String gpuVramLoad = "-";
 
+// Screen states, for what to display, when to display it, and how!
+enum ScreenState
+{
+  Unknown,
+  WaitingConnection,
+  ShowStats,
+} screenstate, previousstate;
+
 // error checker, if this goes up to a certain amount, reset everything.
 byte errorcount = 0;
 bool connected = false;
@@ -65,9 +73,9 @@ void setup()
 {
   // Set up serial communication for the board
   #if defined (TEENSYDUINO)
-  Serial.begin(115200);
+    Serial.begin(115200);
   #else
-  Serial.begin(115200, SERIAL_8E2);
+    Serial.begin(115200, SERIAL_8E2);
   #endif
 
   // Initialize the communications stage
@@ -93,19 +101,23 @@ void setup()
   gpuVramLoad.reserve(6);
 
   // Set up the TFT
-  //delay(100);
-  tft.initR(INITR_GREENTAB);
+  #if SCR_TYPE == SCR_7735
+    tft.initR(INITR_GREENTAB);
+  #elif SCR_TYPE == SCR_7789
+    tft.init(SCR_WIDTH, SCR_HEIGHT);
+  #endif
+  delay(100);
   tft.setRotation(SCR_ROTATE);
-  tft.fillScreen(ST77XX_BLACK);
   tft.setTextColor(ST77XX_WHITE);
   tft.setTextWrap(false);
+
+  previousstate = ScreenState::Unknown;
+  screenstate = ScreenState::WaitingConnection;
 }
 
 void loop()
 {
   bool shouldwait = true;
-
-  tft.fillScreen(ST77XX_BLACK);
 
   // we mustve lost comms, reset!
   if (errorcount >= 5)
@@ -115,6 +127,8 @@ void loop()
 
     commstage = SerialStage::Handshake;
     commstagepart = 0;
+
+    screenstate = ScreenState::WaitingConnection;
 
     cpuName = "-";
     gpuName = "-";
@@ -145,6 +159,7 @@ void loop()
     {
       Serial.write("101");
       commstage = SerialStage::ComputerParts;
+      screenstate = ScreenState::ShowStats;
       commstagepart = 0;
       shouldwait = false;
       connected = true;
@@ -196,32 +211,53 @@ void loop()
   }
 
   if (shouldwait)
-  {
-    if (connected) {
-      tft.setCursor(0, 00); tft.print(cpuName);
-      tft.setCursor(0, 10); tft.print("Freq: " + cpuFreq + " GHz");
-      tft.setCursor(0, 20); tft.print("Load: " + cpuLoad + " %");
-      tft.setCursor(0, 30); tft.print("Temp: " + cpuTemp + " \xF7 C");
+    delay(1000);
 
-      tft.setCursor(0, 50); tft.print(gpuName);
-      tft.setCursor(0, 60); tft.print("Temp: " + gpuTemp + " \xF7 C");
-      tft.setCursor(0, 70); tft.print("Core Clock: " + gpuCoreClock + " MHz");
-      tft.setCursor(0, 80); tft.print("Core Load: " + gpuCoreLoad + " %");
-      tft.setCursor(0, 90); tft.print("VRAM Clock: " + gpuVramClock + " MHz");
-      tft.setCursor(0, 100); tft.print("VRAM Load: " + gpuVramLoad + " %");
-      
-      tft.setCursor(0, 120); tft.print("RAM: " + ramUsed + " / " + ramCount);
-    }
-    else
+  tft.fillScreen(ST77XX_BLUE);
+
+  // Drawing on screen!
+  if (screenstate != previousstate)
+  {
+    previousstate = screenstate;
+    tft.fillScreen(ST77XX_BLACK);
+
+    // Initialize the new screen
+    if (screenstate == ScreenState::WaitingConnection)
     {
       tft.setCursor(55, 50);
       tft.print("MaxStats");
       tft.setCursor(5, 60);
       tft.print("Waiting for connection...");
-      delay(4000);
     }
+    else
+    {
+      tft.setCursor(0, 00); tft.print(cpuName);
+      tft.setCursor(0, 24); tft.print("Freq: GHz");
+      tft.setCursor(48, 24); tft.print("Load: %");
+      tft.setCursor(96, 24); tft.print("Temp: \xF7 C");
 
+      tft.setCursor(0, 36); tft.print(gpuName);
+      tft.setCursor(36, 52); tft.print("%");
+      tft.setCursor(0, 60); tft.print("Core Clock: " + gpuCoreClock + " MHz");
+      tft.setCursor(72, 52); tft.print("%");
+      tft.setCursor(48, 60); tft.print("VRAM Clock: " + gpuVramClock + " MHz");
+      tft.setCursor(96, 60); tft.print("Temp: \xF7 C");
 
-    delay(1000);
+      tft.setCursor(0, 120); tft.print("RAM: --.- / " + ramCount);
+    }
+  }
+
+  // Repeat draws!
+  if (screenstate == ScreenState::ShowStats)
+  {
+    tft.setTextSize(2);
+
+    tft.setCursor(0, 8); tft.print(cpuFreq);
+    tft.setCursor(48, 8); tft.print(cpuLoad);
+    tft.setCursor(96, 8); tft.print(cpuTemp);
+
+    tft.setCursor(0, 44); tft.print(gpuCoreLoad);
+    tft.setCursor(48, 44); tft.print(gpuVramLoad);
+    tft.setCursor(96, 44); tft.print(gpuTemp);
   }
 }
