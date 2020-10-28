@@ -135,8 +135,8 @@ namespace MaxStatsDesktop
 
                         cpuName = hardware.Name;
                         cpuFreq = (_freqSum / _coreCount / 1000).ToString("n2");
-                        cpuTemp = _cpuTemp.ToString("n1");
-                        cpuLoad = _cpuLoad.ToString("n1");
+                        cpuTemp = _cpuTemp.ToString("f1");
+                        cpuLoad = _cpuLoad.ToString("f1").PadLeft(4, ' ');
                     }
                     else if (hardware.HardwareType == HardwareType.GpuNvidia || hardware.HardwareType == HardwareType.GpuAmd)
                     {
@@ -182,11 +182,11 @@ namespace MaxStatsDesktop
                         }
 
                         gpuName = hardware.Name;
-                        gpuTemp = _gpuTemp.ToString("n1");
-                        gpuCoreLoad = _gpuCoreLoad.ToString("n1");
-                        gpuCoreClock = _gpuCoreClock.ToString("n1");
-                        gpuVramLoad = _gpuVramLoad.ToString("n1");
-                        gpuVramClock = _gpuVramClock.ToString("n1");
+                        gpuTemp = _gpuTemp.ToString("f1");
+                        gpuCoreLoad = _gpuCoreLoad.ToString("f1").PadLeft(4, ' ');
+                        gpuCoreClock = _gpuCoreClock.ToString("f1").PadLeft(6, ' ');
+                        gpuVramLoad = _gpuVramLoad.ToString("f1").PadLeft(4, ' ');
+                        gpuVramClock = _gpuVramClock.ToString("f1").PadLeft(6, ' ');
                     }
                     else if (hardware.HardwareType == HardwareType.Memory)
                     {
@@ -204,7 +204,7 @@ namespace MaxStatsDesktop
                             }
                         }
 
-                        ramUsed = _ramUsed.ToString("n1");
+                        ramUsed = _ramUsed.ToString("f1");
                         ramTotal = Decimal.Round(_ramUsed + _ramAvailable).ToString("n0");
                     }
                 }
@@ -257,89 +257,92 @@ namespace MaxStatsDesktop
                     continue;
                 }
 
-                if (stage == SerialStage.Handshake)
+                lock (serial)
                 {
-                    // First, send a message to the device
-                    if (stagepart == 0)
+                    if (stage == SerialStage.Handshake)
                     {
-                        serial.Write("010");
-                        stagepart = 1;
-                    }
-                    // Next, wait for a response. If one isn't recieved in 5 seconds, restart.
-                    else if (stagepart == 1)
-                    {
-                        var check = Task.Run(() => SerialResponse("101"));
+                        // First, send a message to the device
+                        if (stagepart == 0)
+                        {
+                            serial.Write("010");
+                            stagepart = 1;
+                        }
+                        // Next, wait for a response. If one isn't recieved in 5 seconds, restart.
+                        else if (stagepart == 1)
+                        {
+                            var check = Task.Run(() => SerialResponse("101"));
 
-                        if (check.Wait(TimeSpan.FromSeconds(5)))
-                        {
-                            stage = SerialStage.ComputerParts;
-                            stagepart = 0;
-                        }
-                        else
-                        {
-                            stage = SerialStage.Handshake;
-                            stagepart = 0;
-                        }
-                    }    
-                }
-                else if (stage == SerialStage.ComputerParts)
-                {
-                    if (stagepart == 0)
-                    {
-                        lock (_compMutex)
-                        {
-                            serial.Write($"{cpuName}|{gpuName}|{ramTotal}GB|");
-                        }
-                        stagepart = 1;
-                    }
-                    else if (stagepart == 1)
-                    {
-                        var check = Task.Run(() => SerialResponse("222"));
-
-                        if (check.Wait(TimeSpan.FromSeconds(5)))
-                        {
-                            stage = SerialStage.ContinuousStats;
-                            stagepart = 0;
-                        }
-                        else
-                        {
-                            stage = SerialStage.Handshake;
-                            stagepart = 0;
+                            if (check.Wait(TimeSpan.FromSeconds(5)))
+                            {
+                                stage = SerialStage.ComputerParts;
+                                stagepart = 0;
+                            }
+                            else
+                            {
+                                stage = SerialStage.Handshake;
+                                stagepart = 0;
+                            }
                         }
                     }
-                }
-                else if (stage == SerialStage.ContinuousStats)
-                {
-
-                    if (stagepart == 0)
+                    else if (stage == SerialStage.ComputerParts)
                     {
-                        lock (_compMutex)
+                        if (stagepart == 0)
                         {
-                            serial.Write($"{cpuFreq}|{cpuTemp}|{cpuLoad}|{ramUsed}|{gpuTemp}|" +
-                                $"{gpuCoreClock}|{gpuCoreLoad}|{gpuVramClock}|{gpuVramLoad}|");
+                            lock (_compMutex)
+                            {
+                                serial.Write($"{cpuName}|{gpuName}|{ramTotal}GB|");
+                            }
+                            stagepart = 1;
                         }
-                        stagepart = 1;
+                        else if (stagepart == 1)
+                        {
+                            var check = Task.Run(() => SerialResponse("222"));
+
+                            if (check.Wait(TimeSpan.FromSeconds(5)))
+                            {
+                                stage = SerialStage.ContinuousStats;
+                                stagepart = 0;
+                            }
+                            else
+                            {
+                                stage = SerialStage.Handshake;
+                                stagepart = 0;
+                            }
+                        }
                     }
-                    else if (stagepart == 1)
+                    else if (stage == SerialStage.ContinuousStats)
                     {
-                        // wait for response "333" for 5 seconds, if nothing then restart
-                        var check = Task.Run(() => SerialResponse("333"));
 
-                        if (check.Wait(TimeSpan.FromSeconds(5)))
+                        if (stagepart == 0)
                         {
-                            stage = SerialStage.ContinuousStats;
-                            stagepart = 0;
+                            lock (_compMutex)
+                            {
+                                serial.Write($"{cpuFreq}|{cpuTemp}|{cpuLoad}|{ramUsed}|{gpuTemp}|" +
+                                    $"{gpuCoreClock}|{gpuCoreLoad}|{gpuVramClock}|{gpuVramLoad}|");
+                            }
+                            stagepart = 1;
                         }
-                        else
+                        else if (stagepart == 1)
                         {
-                            stage = SerialStage.Handshake;
-                            stagepart = 0;
+                            // wait for response "333" for 5 seconds, if nothing then restart
+                            var check = Task.Run(() => SerialResponse("333"));
+
+                            if (check.Wait(TimeSpan.FromSeconds(5)))
+                            {
+                                stage = SerialStage.ContinuousStats;
+                                stagepart = 0;
+                            }
+                            else
+                            {
+                                stage = SerialStage.Handshake;
+                                stagepart = 0;
+                            }
                         }
                     }
                 }
 
                 // Sleep for a moment, we don't need to spam the serial pipe.
-                Thread.Sleep(500);
+                Thread.Sleep(50);
             }
         }
 
@@ -468,13 +471,31 @@ namespace MaxStatsDesktop
                 return;
             }
 
+            // Temporary variable for the checked item.
+            bool shouldCheck = !((ToolStripMenuItem)e.ClickedItem).Checked;
+            // Disable the rest of the checkmarks on the items.
+            foreach (ToolStripItem t in trayMenu.Items)
+                ((ToolStripMenuItem)t).Checked = false;
+            // Change the selected item's checkmark
+            ((ToolStripMenuItem)e.ClickedItem).Checked = shouldCheck;
+            _sendmessage = shouldCheck;
+
             // Time to connect with serial!
             try
             {
-                if (serial.IsOpen)
-                    serial.Close();
-                serial.PortName = match.Groups[1].Value;
-                serial.Open();
+                lock (serial)
+                {
+                    if (serial.IsOpen)
+                        serial.Close();
+
+                    serial.PortName = match.Groups[1].Value;
+
+                    stage = SerialStage.Handshake;
+                    stagepart = 0;
+
+                    if (shouldCheck)
+                        serial.Open();
+                }
             }
             catch (System.UnauthorizedAccessException)
             {
@@ -496,15 +517,6 @@ namespace MaxStatsDesktop
                 );
                 return;
             }
-
-            // Temporary variable for the checked item.
-            bool shouldCheck = !((ToolStripMenuItem)e.ClickedItem).Checked;
-            // Disable the rest of the checkmarks on the items.
-            foreach (ToolStripItem t in trayMenu.Items)
-                ((ToolStripMenuItem) t).Checked = false;
-            // Change the selected item's checkmark
-            ((ToolStripMenuItem) e.ClickedItem).Checked = shouldCheck;
-            _sendmessage = shouldCheck;
         }
     }
 

@@ -67,7 +67,6 @@ enum ScreenState
 
 // error checker, if this goes up to a certain amount, reset everything.
 byte errorcount = 0;
-bool connected = false;
 
 void setup()
 {
@@ -108,8 +107,9 @@ void setup()
   #endif
   delay(100);
   tft.setRotation(SCR_ROTATE);
-  tft.setTextColor(ST77XX_WHITE);
   tft.setTextWrap(false);
+  tft.fillScreen(ST77XX_BLACK);
+  tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK);
 
   previousstate = ScreenState::Unknown;
   screenstate = ScreenState::WaitingConnection;
@@ -117,13 +117,10 @@ void setup()
 
 void loop()
 {
-  bool shouldwait = true;
-
   // we mustve lost comms, reset!
   if (errorcount >= 5)
   {
     errorcount = 0;
-    connected = false;
 
     commstage = SerialStage::Handshake;
     commstagepart = 0;
@@ -152,17 +149,13 @@ void loop()
       if (serial_matches("010"))
       {
         commstagepart = 1;
-        shouldwait = false;
       }
     }
     else if (commstagepart == 1)
     {
       Serial.write("101");
       commstage = SerialStage::ComputerParts;
-      screenstate = ScreenState::ShowStats;
       commstagepart = 0;
-      shouldwait = false;
-      connected = true;
     }
   }
   else if (commstage == SerialStage::ComputerParts)
@@ -174,18 +167,20 @@ void loop()
       {
         commstagepart = 1;
         errorcount = 0;
-        shouldwait = false;
       }
       else
+      {
         errorcount++;
+        delay(1000);
+      }
     }
     else if (commstagepart == 1)
     {
       // respond that we got it, and move to the next stage
       Serial.write("222");
       commstage = SerialStage::ContinuousStats;
+      screenstate = ScreenState::ShowStats;
       commstagepart = 0;
-      shouldwait = false;
     }
   }
   else if (commstage == SerialStage::ContinuousStats)
@@ -199,27 +194,25 @@ void loop()
         errorcount = 0;
       }
       else
+      {
         errorcount++;
+        delay(1000);
+      }
     }
     else if (commstagepart == 1)
     {
       // respond that we got it, and repeat
       Serial.write("333");
       commstagepart = 0;
-      shouldwait = false;
     }
   }
-
-  if (shouldwait)
-    delay(1000);
-
-  tft.fillScreen(ST77XX_BLUE);
 
   // Drawing on screen!
   if (screenstate != previousstate)
   {
     previousstate = screenstate;
     tft.fillScreen(ST77XX_BLACK);
+    tft.setTextSize(1);
 
     // Initialize the new screen
     if (screenstate == ScreenState::WaitingConnection)
@@ -231,17 +224,41 @@ void loop()
     }
     else
     {
-      tft.setCursor(0, 00); tft.print(cpuName);
-      tft.setCursor(0, 24); tft.print("Freq: GHz");
-      tft.setCursor(48, 24); tft.print("Load: %");
-      tft.setCursor(96, 24); tft.print("Temp: \xF7 C");
+      tft.setCursor(4, 3);
+      if (cpuName.substring(0, 3).equals("AMD"))
+        tft.setTextColor(tft.color565(119, 185, 0), ST77XX_BLACK);
+      else
+        tft.setTextColor(tft.color565(18, 124, 193), ST77XX_BLACK);
+      tft.print(cpuName);
 
-      tft.setCursor(0, 36); tft.print(gpuName);
-      tft.setCursor(36, 52); tft.print("%");
-      tft.setCursor(0, 60); tft.print("Core Clock: " + gpuCoreClock + " MHz");
-      tft.setCursor(72, 52); tft.print("%");
-      tft.setCursor(48, 60); tft.print("VRAM Clock: " + gpuVramClock + " MHz");
-      tft.setCursor(96, 60); tft.print("Temp: \xF7 C");
+      tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK);
+      tft.setCursor(0, 24+4); tft.print("Freq GHz");
+      tft.setCursor(68, 24+4); tft.print("Load %");
+      tft.setCursor(112, 24+4); tft.print("Temp \xF7 C");
+
+      // dividers
+      tft.drawLine(51, 8+4, 51, 30+4, ST77XX_WHITE);
+      tft.drawLine(106, 8+4, 106, 30+4, ST77XX_WHITE);
+
+      if (gpuName.substring(0, 3).equals("AMD"))
+        tft.setTextColor(ST77XX_RED, ST77XX_BLACK);
+      else
+        tft.setTextColor(ST77XX_GREEN, ST77XX_BLACK);
+      tft.setCursor(4, 44+11-8); tft.print(gpuName);
+
+      tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK);
+      tft.setCursor(12, 68+12-8); tft.print("Load %");
+      tft.setCursor(68, 68+12-8); tft.print("VRAM %");
+
+      tft.setCursor(12-12, 68+16+12); tft.print("Load MHz");
+      tft.setCursor(68-12, 68+16+12); tft.print("VRAM MHz");
+      //tft.setCursor(0, 68); tft.print("CoreClk\n" + gpuCoreClock + "MHz");
+      //tft.setCursor(48, 68); tft.print("VRAMClk\n " + gpuVramClock + "MHz");
+      tft.setCursor(112, 68+12-8); tft.print("Temp \xF7 C");
+      
+      // dividers
+      tft.drawLine(51, 52+12-8, 51, 74+12+18, ST77XX_WHITE);
+      tft.drawLine(106, 52+12-8, 106, 74+12+18, ST77XX_WHITE);
 
       tft.setCursor(0, 120); tft.print("RAM: --.- / " + ramCount);
     }
@@ -252,12 +269,18 @@ void loop()
   {
     tft.setTextSize(2);
 
-    tft.setCursor(0, 8); tft.print(cpuFreq);
-    tft.setCursor(48, 8); tft.print(cpuLoad);
-    tft.setCursor(96, 8); tft.print(cpuTemp);
+    tft.setCursor(0, 8+4); tft.print(cpuFreq);
+    tft.setCursor(56, 8+4); tft.print(cpuLoad);
+    tft.setCursor(112, 8+4); tft.print(cpuTemp);
 
-    tft.setCursor(0, 44); tft.print(gpuCoreLoad);
-    tft.setCursor(48, 44); tft.print(gpuVramLoad);
-    tft.setCursor(96, 44); tft.print(gpuTemp);
+    tft.setCursor(0, 52+12-8); tft.print(gpuCoreLoad);
+    tft.setCursor(56, 52+12-8); tft.print(gpuVramLoad);
+    tft.setCursor(112, 52+12-8); tft.print(gpuTemp);
+
+    tft.setTextSize(1);
+    tft.setCursor(12, 68+16+4); tft.print(gpuCoreClock);
+    tft.setCursor(68, 68+16+4); tft.print(gpuVramClock);
+
+    tft.setCursor(30, 120); tft.print(ramUsed);
   }
 }
