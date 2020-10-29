@@ -6,6 +6,10 @@
 // Standard include, because we use Arduino in the household.
 #include <Arduino.h>
 
+// Necessary includes, compiler will optimize out what we don't use
+#include <Adafruit_ST7735.h>
+#include <Adafruit_ST7789.h>
+
 // Include config and macro stuffs
 #include "macros.h"
 #include "config.h"
@@ -13,10 +17,8 @@
 #ifndef SCR_TYPE
   #error SCRTYPE must be defined in `config.h`!
 #elif SCR_TYPE == SCR_7735
-  #include <Adafruit_ST7735.h>
   Adafruit_ST7735 tft = Adafruit_ST7735(PIN_CS, PIN_DC, PIN_RST);
 #elif SCR_TYPE == SCR_7789
-  #include <Adafruit_ST7789.h>
   Adafruit_ST7789 tft = Adafruit_ST7789(PIN_CS, PIN_DC, PIN_RST);
 #else
   #error SCR_TYPE must be defined properly in `config.h`!
@@ -101,7 +103,7 @@ void setup()
 
   // Set up the TFT
   #if SCR_TYPE == SCR_7735
-    tft.initR(INITR_GREENTAB);
+    tft.initR(TAB_TYPE);
   #elif SCR_TYPE == SCR_7789
     tft.init(SCR_WIDTH, SCR_HEIGHT);
   #endif
@@ -255,17 +257,15 @@ void loop()
       tft.setCursor(12 * SCR_SCALE, 72 * SCR_SCALE); tft.print("Load %");
       tft.setCursor(68 * SCR_SCALE, 72 * SCR_SCALE); tft.print("VRAM %");
 
-      tft.setCursor(0 * SCR_SCALE, 96 * SCR_SCALE); tft.print("Load MHz");
+      tft.setCursor(0 * SCR_SCALE, 96 * SCR_SCALE); tft.print("Core MHz");
       tft.setCursor(56 * SCR_SCALE, 96 * SCR_SCALE); tft.print("VRAM MHz");
-      //tft.setCursor(0, 68); tft.print("CoreClk\n" + gpuCoreClock + "MHz");
-      //tft.setCursor(48, 68); tft.print("VRAMClk\n " + gpuVramClock + "MHz");
       tft.setCursor(112 * SCR_SCALE, 72 * SCR_SCALE); tft.print("Temp \xF7 C");
       
       // dividers
       tft.drawLine(51 * SCR_SCALE, 56 * SCR_SCALE, 51 * SCR_SCALE, 104 * SCR_SCALE, ST77XX_WHITE);
       tft.drawLine(106 * SCR_SCALE, 56 * SCR_SCALE, 106 * SCR_SCALE, 104 * SCR_SCALE, ST77XX_WHITE);
 
-      tft.setCursor(320 - 6 * 10 * SCR_SCALE, 120 * SCR_SCALE - 8 * SCR_SCALE); tft.print("RAM: " + ramCount);
+      tft.setCursor(SCR_WIDTH - 6 * 10 * SCR_SCALE, SCR_HEIGHT - 8 * SCR_SCALE); tft.print("RAM: " + ramCount);
     }
   }
 
@@ -287,6 +287,6 @@ void loop()
     tft.setCursor(68 * SCR_SCALE, 88 * SCR_SCALE); tft.print(gpuVramClock);
 
     tft.setTextSize(2 * SCR_SCALE);
-    tft.setCursor(320 - 5 * 10 * SCR_SCALE, 120 * SCR_SCALE - 24 * SCR_SCALE); tft.print(ramUsed);
+    tft.setCursor(SCR_WIDTH - 5 * 10 * SCR_SCALE, SCR_HEIGHT - 24 * SCR_SCALE); tft.print(ramUsed);
   }
 }
