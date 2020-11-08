@@ -6,7 +6,7 @@
 
 // Screen types. Change depending on what screen you're using!
 // SCR_7735, SCR_7789
-#define SCR_TYPE SCR_7735
+#define SCR_TYPE SCR_7789
 
 // Rotate the screen.
 // 0 = Portrait, 1 = Landscape,
@@ -30,3 +30,31 @@
 #define PIN_DC   9  // Data command
 #define PIN_RST  8  // Reset (set to -1 if not in use)
 #define PIN_BL   7  // Backlight
+
+// Uncomment to use the Keyboard feature.
+#define ENABLE_KEYBOARD
+
+#ifdef ENABLE_KEYBOARD
+  // Keyboard configuration
+  #define KEY_COUNT 8
+
+  // Pin to button input
+  #define KEY_PIN0 22
+  #define KEY_PIN1 21
+  #define KEY_PIN2 20
+  #define KEY_PIN3 19
+  #define KEY_PIN4 18
+  #define KEY_PIN5 17
+  #define KEY_PIN6 16
+  #define KEY_PIN7 15
+
+  // Keyboard key to bind the button to
+  #define KEY_BIND0 KEY_F13
+  #define KEY_BIND1 KEY_F14
+  #define KEY_BIND2 KEY_F15
+  #define KEY_BIND3 KEY_F16
+  #define KEY_BIND4 KEY_F17
+  #define KEY_BIND5 KEY_F18
+  #define KEY_BIND6 KEY_F19
+  #define KEY_BIND7 KEY_F10
+#endif

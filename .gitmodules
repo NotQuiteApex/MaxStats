@@ -1,0 +1,3 @@
+[submodule "MCU/lib/ST7735_t3"]
+	path = MCU/lib/ST7735_t3
+	url = https://github.com/PaulStoffregen/ST7735_t3.git
