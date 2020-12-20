@@ -3,15 +3,10 @@
  * CONFIG - edit values in here to *
  * configure your experience.      *
 \***********************************/
+#ifndef MAX_STATS_CONFIG_H
+#define MAX_STATS_CONFIG_H
 
-// IGNORE THESE! DON'T TOUCH THESE!
-// Screen types
-#define SCR_7735 7735
-#define SCR_7789 7789
-// Tab types
-#define TAB_GREEN INITR_GREENTAB 
-#define TAB_BLACK INITR_BLACKTAB 
-// Edit everything below here.
+#include "config_setup.h"
 
 // Screen types. Change depending on what screen you're using!
 #define SCR_TYPE SCR_7789 // SCR_7735, SCR_7789
@@ -19,9 +14,9 @@
 // TFT settings
 const u16 scr_width = 320;    // Screen width
 const u16 scr_height = 240;   // Screen height
-const u8 scr_rotate = 1;      // Screen orientation, 0=Portrait, 1=Landscape, 2=InvertPortrait, 3= InvertLandscape
+const u8 scr_rotate = 1;      // Orientation, 0=Portrait, 1=Landscape, 2=InvPortrait, 3=InvLandscape
 const u8 scr_scale = 2;       // Scales all the text, coords, etc for the screen.
-const u8 scr_tab = TAB_GREEN; // Tab type, for st7735 screens (not applicable for st7789)
+const u8 scr_tab = TAB_GREEN; // Tab type, GREEN or BLACK, for st7735 screens (not applicable for st7789)
 // TFT pins
 const u8 pin_cs  = 10; // Chip select
 const u8 pin_dc  = 9;  // Data command
@@ -47,6 +42,8 @@ const u8 pin_bl  = 7;  // Backlight
   // pinMode for the keys.
   const u8 keyPinMode = INPUT_PULLUP;
   // Set to true if the keys are pulled up in any way
-  // (through arduino or physical pull ups)
+  // (through Arduino or physical pull ups)
   const bool keyPulledUp = true;
+#endif
+
 #endif

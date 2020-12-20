@@ -1,5 +1,5 @@
-#ifndef SH_TYPES_H
-#define SH_TYPES_H
+#ifndef MAX_STATS_SH_TYPES_H
+#define MAX_STATS_SH_TYPES_H
 
 // Shorthand types.
 // Unsigned
@@ -13,4 +13,10 @@ typedef __INT16_TYPE__ s16;
 typedef __INT32_TYPE__ s32;
 typedef __INT64_TYPE__ s64;
 
-#endif // SH_TYPES_H
+// Key and pin configuration struct
+struct KeyConf {
+    u8 pin;
+    u32 key;
+};
+
+#endif // MAX_STATS_SH_TYPES_H
