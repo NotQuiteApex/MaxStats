@@ -118,12 +118,14 @@ namespace MaxStatsDesktop
 
                         foreach (var sensor in hardware.Sensors)
                         {
+                            Console.WriteLine(sensor.Name);
                             if (sensor.SensorType == SensorType.Clock && sensor.Name != "Bus Speed")
                             {
                                 _coreCount++;
                                 _freqSum += (decimal)sensor.Value;
                             }
-                            else if (sensor.SensorType == SensorType.Temperature && sensor.Name == "Core (Tctl)")
+                            else if (sensor.SensorType == SensorType.Temperature && 
+                                (sensor.Name == "Core (Tctl)" || sensor.Name == "Core (Tctl/Tdie)"))
                             {
                                 _cpuTemp = (decimal)sensor.Value;
                             }
@@ -132,6 +134,7 @@ namespace MaxStatsDesktop
                                 _cpuLoad = (decimal)sensor.Value;
                             }
                         }
+                        Console.WriteLine();
 
                         cpuName = hardware.Name;
                         cpuFreq = (_freqSum / _coreCount / 1000).ToString("n2");

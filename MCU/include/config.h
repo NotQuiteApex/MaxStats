@@ -12,16 +12,16 @@
 #define SCR_TYPE SCR_7789 // SCR_7735, SCR_7789
 
 // TFT settings
-const u16 scr_width = 320;    // Screen width
-const u16 scr_height = 240;   // Screen height
+const u16 scr_width = 240;    // Screen width
+const u16 scr_height = 320;   // Screen height
 const u8 scr_rotate = 1;      // Orientation, 0=Portrait, 1=Landscape, 2=InvPortrait, 3=InvLandscape
 const u8 scr_scale = 2;       // Scales all the text, coords, etc for the screen.
 const u8 scr_tab = TAB_GREEN; // Tab type, GREEN or BLACK, for st7735 screens (not applicable for st7789)
 // TFT pins
 const u8 pin_cs  = 10; // Chip select
 const u8 pin_dc  = 9;  // Data command
-const u8 pin_rst = 8;  // Reset (set to -1 if not used)
-const u8 pin_bl  = 7;  // Backlight
+const u8 pin_rst = 7;  // Reset (set to -1 if not used)
+const u8 pin_bl  = 8;  // Backlight
 
 // Uncomment to use the Keyboard feature.
 #define ENABLE_KEYBOARD
@@ -30,14 +30,12 @@ const u8 pin_bl  = 7;  // Backlight
   // Keyboard configuration
   // Pins to configure, and their associated keys
   const KeyConf keys[] = {
-    {22, KEY_F13},
-    {21, KEY_F14},
-    {20, KEY_F15},
-    {19, KEY_F16},
-    {18, KEY_F17},
-    {17, KEY_F18},
-    {16, KEY_F19},
-    {15, KEY_F20},
+    {2, KEY_F13},
+    {3, KEY_F14},
+    {4, KEY_F15},
+    {A2, KEY_F16},
+    {A1, KEY_F17},
+    {A0, KEY_F18},
   };
   // pinMode for the keys.
   const u8 keyPinMode = INPUT_PULLUP;
